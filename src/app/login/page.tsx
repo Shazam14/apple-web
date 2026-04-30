@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { setToken, getToken } from "@/lib/auth";
 
-const KEDCO_API = process.env.NEXT_PUBLIC_KEDCO_API || "http://localhost:8000";
-
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -22,7 +20,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`${KEDCO_API}/api/v1/auth/login`, {
+      const res = await fetch(`/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

@@ -1,10 +1,8 @@
 import { getToken, logout } from "./auth";
 
-const APPLE_API = process.env.NEXT_PUBLIC_APPLE_API || "http://localhost:8002";
-
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${APPLE_API}/api/v1/lending${path}`, {
+  const res = await fetch(`/api/v1/lending${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
