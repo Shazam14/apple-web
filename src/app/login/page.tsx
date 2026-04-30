@@ -22,8 +22,8 @@ export default function LoginPage() {
     try {
       const res = await fetch(`/api/v1/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ username, password }).toString(),
       });
       if (!res.ok) {
         const text = await res.text();
