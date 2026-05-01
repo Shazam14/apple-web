@@ -7,12 +7,14 @@ export function LatepayModal({
   borrower,
   onClose,
   onAdded,
+  defaultAmount,
 }: {
   borrower: Borrower;
   onClose: () => void;
   onAdded: () => void;
+  defaultAmount?: string;
 }) {
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(defaultAmount ?? "");
   const [detail, setDetail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

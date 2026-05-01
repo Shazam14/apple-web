@@ -152,10 +152,10 @@ function trancheDays(t: Tranche): number {
 }
 
 type LedgerRow =
-  | { kind: "palod"; id: number; amount: string; date: string; trancheIndex: number }
-  | { kind: "than"; id: number; amount: string; detail: string; date: string }
-  | { kind: "bayad"; id: number; amount: string; detail: string; date: string }
-  | { kind: "note"; id: number; detail: string; date: string };
+  | { kind: "palod"; id: number; amount: string; date: string; trancheIndex: number; balance: number }
+  | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
+  | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
+  | { kind: "note"; id: number; detail: string; date: string; balance: number };
 
 function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[] {
   const rows: LedgerRow[] = tranches.map((t, i) => ({
@@ -164,20 +164,28 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
     amount: t.principal,
     date: t.released_at,
     trancheIndex: i + 1,
+    balance: 0,
   }));
   for (const a of activity) {
     if (a.activity_type === "Late interest" && a.amount) {
-      rows.push({ kind: "than", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at });
+      rows.push({ kind: "than", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at, balance: 0 });
     } else if (
       (a.activity_type === "Payment received" || a.activity_type === "Partial payment") &&
       a.amount
     ) {
-      rows.push({ kind: "bayad", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at });
+      rows.push({ kind: "bayad", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at, balance: 0 });
     } else if (a.activity_type === "Missed collection") {
-      rows.push({ kind: "note", id: a.id, detail: a.detail ?? "Missed collection", date: a.created_at });
+      rows.push({ kind: "note", id: a.id, detail: a.detail ?? "Missed collection", date: a.created_at, balance: 0 });
     }
   }
-  return rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  let running = 0;
+  for (const r of rows) {
+    if (r.kind === "palod" || r.kind === "than") running += Number(r.amount);
+    else if (r.kind === "bayad") running -= Number(r.amount);
+    r.balance = running;
+  }
+  return rows;
 }
 
 function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number }) {
@@ -194,6 +202,7 @@ function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; ac
                 <th className="text-right px-3 py-1.5 font-medium text-amber-soft/80">PALOD</th>
                 <th className="text-right px-3 py-1.5 font-medium text-blue-soft/80">THAN</th>
                 <th className="text-right px-3 py-1.5 font-medium text-green-soft/80">BAYAD</th>
+                <th className="text-right px-3 py-1.5 font-medium">BALANCE</th>
               </tr>
             </thead>
             <tbody>
@@ -228,9 +237,10 @@ function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; ac
                   )}
                   {r.kind === "note" && (
                     <>
-                      <td className="px-3 py-1.5 text-amber-soft/80" colSpan={3}>{r.detail}</td>
+                      <td className="px-3 py-1.5 text-amber-soft/80" colSpan={4}>{r.detail}</td>
                     </>
                   )}
+                  <td className="px-3 py-1.5 text-right tabular-nums font-medium">{formatPHP(r.balance)}</td>
                 </tr>
               ))}
             </tbody>
@@ -291,6 +301,9 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [addingTranche, setAddingTranche] = useState(false);
   const [addingLatepay, setAddingLatepay] = useState(false);
+  const [addingAccrual, setAddingAccrual] = useState(false);
+
+  const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
 
   const dirtyName = name !== b.name;
   const dirtyNakulha = nakulha !== b.than_nakulha;
@@ -400,6 +413,14 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
               + latepay
             </button>
             <button
+              onClick={() => setAddingAccrual(true)}
+              disabled={pending}
+              title={`Post today's interest: ₱${dailyInterest}`}
+              className="text-xs text-blue-soft/70 hover:text-white border border-blue-soft/20 hover:border-blue-soft/60 rounded px-1.5 py-0.5 disabled:opacity-60"
+            >
+              + interest
+            </button>
+            <button
               onClick={remove}
               disabled={pending}
               className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
@@ -426,6 +447,17 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
           onClose={() => setAddingLatepay(false)}
           onAdded={() => {
             setAddingLatepay(false);
+            onChange();
+          }}
+        />
+      )}
+      {addingAccrual && (
+        <LatepayModal
+          borrower={b}
+          defaultAmount={dailyInterest}
+          onClose={() => setAddingAccrual(false)}
+          onAdded={() => {
+            setAddingAccrual(false);
             onChange();
           }}
         />
