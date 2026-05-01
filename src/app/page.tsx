@@ -37,7 +37,7 @@ const STEPS = [
   {
     icon: "✅",
     title: "I-record ang bayad",
-    body: "I-expand (▶) ang borrower para makita ang ledger. Makita nimo ang PALOD, THAN, BAYAD, ug running BALANCE — sama gyud sa imong papel!",
+    body: "I-klik ang \"+ bayad\" sa borrower row. Sulod ang amount ug note (e.g. \"toa ub sim\" o \"cash\"). Ma-deduct dayon sa balance ug makita sa ledger.",
   },
 ];
 

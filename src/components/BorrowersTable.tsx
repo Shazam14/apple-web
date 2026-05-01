@@ -6,6 +6,7 @@ import { Panel } from "./Card";
 import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
 import { LatepayModal } from "./LatepayModal";
+import { BayadModal } from "./BayadModal";
 
 export function BorrowersTable({
   borrowers,
@@ -306,6 +307,7 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [addingTranche, setAddingTranche] = useState(false);
   const [addingLatepay, setAddingLatepay] = useState(false);
   const [addingAccrual, setAddingAccrual] = useState(false);
+  const [addingBayad, setAddingBayad] = useState(false);
 
   const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
 
@@ -425,6 +427,13 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
               + interest
             </button>
             <button
+              onClick={() => setAddingBayad(true)}
+              disabled={pending}
+              className="text-xs text-green-soft hover:text-white border border-green-soft/30 hover:border-green-soft/60 rounded px-1.5 py-0.5 disabled:opacity-60"
+            >
+              + bayad
+            </button>
+            <button
               onClick={remove}
               disabled={pending}
               className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
@@ -462,6 +471,16 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
           onClose={() => setAddingAccrual(false)}
           onAdded={() => {
             setAddingAccrual(false);
+            onChange();
+          }}
+        />
+      )}
+      {addingBayad && (
+        <BayadModal
+          borrower={b}
+          onClose={() => setAddingBayad(false)}
+          onAdded={() => {
+            setAddingBayad(false);
             onChange();
           }}
         />
