@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Borrower, BorrowerStatus, api, formatPHP } from "@/lib/api";
+import { Borrower, Tranche, BorrowerStatus, api, formatPHP } from "@/lib/api";
 import { Panel } from "./Card";
 import { AddBorrowerModal } from "./AddBorrowerModal";
+import { AddTrancheModal } from "./AddTrancheModal";
 
 export function BorrowersTable({
   borrowers,
@@ -38,13 +39,12 @@ export function BorrowersTable({
       ) : (
         <>
           <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-wider text-muted">
-                  <Th className="w-[180px] text-left">Borrower</Th>
+                  <Th className="w-[200px] text-left">Borrower</Th>
                   <Th className="w-[140px] text-right">Principal</Th>
                   <Th className="w-[120px] text-left">Status</Th>
-                  <Th className="w-[80px] text-center">Days</Th>
                   <Th className="text-right">
                     <Pill tone="blue">THAN actual</Pill>
                   </Th>
@@ -56,7 +56,7 @@ export function BorrowersTable({
                     <span className="text-muted normal-case">(manual)</span>
                   </Th>
                   <Th className="w-[140px] text-right">Balance</Th>
-                  <Th className="w-[80px]">{null}</Th>
+                  <Th className="w-[100px]">{null}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -143,20 +143,67 @@ function Summary({
   );
 }
 
+function trancheDays(t: Tranche): number {
+  const released = new Date(t.released_at);
+  const today = new Date();
+  const diff = Math.floor((today.getTime() - released.getTime()) / 86400000);
+  return Math.max(1, diff + 1);
+}
+
+function TranchesSubrow({
+  tranches,
+  colSpan,
+}: {
+  tranches: Tranche[];
+  colSpan: number;
+}) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-4 pb-3 pt-0">
+        <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-muted border-b border-card-border">
+                <th className="text-left px-3 py-1.5 font-medium">Tranche</th>
+                <th className="text-right px-3 py-1.5 font-medium">Principal</th>
+                <th className="text-left px-3 py-1.5 font-medium">Released</th>
+                <th className="text-center px-3 py-1.5 font-medium">Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tranches.map((t, i) => (
+                <tr key={t.id} className="border-t border-card-border/50">
+                  <td className="px-3 py-1.5 text-muted">#{i + 1}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{formatPHP(t.principal)}</td>
+                  <td className="px-3 py-1.5 text-muted">
+                    {new Date(t.released_at).toLocaleDateString("en-PH", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </td>
+                  <td className="px-3 py-1.5 text-center tabular-nums">{trancheDays(t)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [name, setName] = useState(b.name);
-  const [principal, setPrincipal] = useState(b.principal);
-  const [days, setDays] = useState(String(b.days_elapsed));
   const [nakulha, setNakulha] = useState(b.than_nakulha);
   const [status, setStatus] = useState<BorrowerStatus>(b.status);
   const [pending, setPending] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [addingTranche, setAddingTranche] = useState(false);
 
   const dirtyName = name !== b.name;
-  const dirtyPrincipal = principal !== b.principal;
-  const dirtyDays = days !== String(b.days_elapsed);
   const dirtyNakulha = nakulha !== b.than_nakulha;
   const dirtyStatus = status !== b.status;
-  const dirty = dirtyName || dirtyPrincipal || dirtyDays || dirtyNakulha || dirtyStatus;
 
   async function commit(patch: Parameters<typeof api.patchBorrower>[1]) {
     setPending(true);
@@ -166,16 +213,6 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
     } finally {
       setPending(false);
     }
-  }
-
-  async function save() {
-    const patch: Parameters<typeof api.patchBorrower>[1] = {};
-    if (dirtyName) patch.name = name;
-    if (dirtyPrincipal) patch.principal = principal;
-    if (dirtyDays) patch.days_elapsed = Number(days);
-    if (dirtyNakulha) patch.than_nakulha = nakulha;
-    if (dirtyStatus) patch.status = status;
-    if (Object.keys(patch).length) await commit(patch);
   }
 
   async function remove() {
@@ -190,102 +227,115 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   }
 
   const cell = "rounded-lg border border-card-border bg-card px-2 py-1.5 outline-none focus:border-amber-soft";
+  const multiTranche = b.tranches.length > 1;
 
   return (
-    <tr className="border-t border-panel-border">
-      <td className="px-2 py-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => dirtyName && save()}
-          className={`${cell} w-full`}
-        />
-      </td>
-      <td className="px-2 py-2">
-        <input
-          type="number"
-          step="0.01"
-          value={principal}
-          onChange={(e) => setPrincipal(e.target.value)}
-          onBlur={() => dirtyPrincipal && save()}
-          className={`${cell} w-full text-right tabular-nums`}
-        />
-      </td>
-      <td className="px-2 py-2">
-        <select
-          value={status}
-          onChange={(e) => {
-            const next = e.target.value as BorrowerStatus;
-            setStatus(next);
-            commit({ status: next });
+    <>
+      <tr className="border-t border-panel-border">
+        <td className="px-2 py-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-muted hover:text-white text-xs w-5 shrink-0 text-center"
+              title={expanded ? "Hide tranches" : "Show tranches"}
+            >
+              {expanded ? "▼" : "▶"}
+            </button>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => dirtyName && commit({ name })}
+              className={`${cell} flex-1 min-w-0`}
+            />
+            {multiTranche && (
+              <span className="text-[10px] text-amber-soft border border-amber-soft/30 rounded px-1 shrink-0">
+                ×{b.tranches.length}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="px-2 py-2 text-right tabular-nums font-medium">
+          {formatPHP(b.principal)}
+        </td>
+        <td className="px-2 py-2">
+          <select
+            value={status}
+            onChange={(e) => {
+              const next = e.target.value as BorrowerStatus;
+              setStatus(next);
+              commit({ status: next });
+            }}
+            className={`${cell} w-full capitalize ${
+              status === "overdue"
+                ? "text-amber-soft"
+                : status === "paid"
+                  ? "text-green-soft"
+                  : "text-white"
+            }`}
+          >
+            <option value="active">Active</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </td>
+        <td className="px-2 py-2 text-right text-blue-soft tabular-nums">
+          {formatPHP(b.than_actual)}
+        </td>
+        <td className="px-2 py-2 text-right text-amber-soft tabular-nums">
+          {formatPHP(b.than_unrealised)}
+        </td>
+        <td className="px-2 py-2">
+          <input
+            type="number"
+            step="0.01"
+            value={nakulha}
+            onChange={(e) => setNakulha(e.target.value)}
+            onBlur={() => dirtyNakulha && commit({ than_nakulha: nakulha })}
+            className={`${cell} w-full text-right tabular-nums border-green-soft/40 focus:border-green-soft`}
+          />
+        </td>
+        <td className="px-2 py-2 text-right tabular-nums">{formatPHP(b.balance)}</td>
+        <td className="px-2 py-2 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setAddingTranche(true)}
+              disabled={pending}
+              className="text-xs text-amber-soft hover:text-white border border-amber-soft/30 hover:border-amber-soft/60 rounded px-1.5 py-0.5 disabled:opacity-60"
+            >
+              + release
+            </button>
+            <button
+              onClick={remove}
+              disabled={pending}
+              className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
+            >
+              remove
+            </button>
+          </div>
+        </td>
+      </tr>
+      {expanded && <TranchesSubrow tranches={b.tranches} colSpan={8} />}
+      {addingTranche && (
+        <AddTrancheModal
+          borrower={b}
+          onClose={() => setAddingTranche(false)}
+          onAdded={() => {
+            setAddingTranche(false);
+            onChange();
           }}
-          className={`${cell} w-full capitalize ${
-            status === "overdue"
-              ? "text-amber-soft"
-              : status === "paid"
-                ? "text-green-soft"
-                : "text-white"
-          }`}
-        >
-          <option value="active">Active</option>
-          <option value="paid">Paid</option>
-          <option value="overdue">Overdue</option>
-        </select>
-      </td>
-      <td className="px-2 py-2">
-        <input
-          type="number"
-          value={days}
-          onChange={(e) => setDays(e.target.value)}
-          onBlur={() => dirtyDays && save()}
-          className={`${cell} w-full text-center tabular-nums`}
         />
-      </td>
-      <td className="px-2 py-2 text-right text-blue-soft tabular-nums">
-        {formatPHP(b.than_actual)}
-      </td>
-      <td className="px-2 py-2 text-right text-amber-soft tabular-nums">
-        {formatPHP(b.than_unrealised)}
-      </td>
-      <td className="px-2 py-2">
-        <input
-          type="number"
-          step="0.01"
-          value={nakulha}
-          onChange={(e) => setNakulha(e.target.value)}
-          onBlur={() => dirtyNakulha && save()}
-          className={`${cell} w-full text-right tabular-nums border-green-soft/40 focus:border-green-soft`}
-        />
-      </td>
-      <td className="px-2 py-2 text-right tabular-nums">{formatPHP(b.balance)}</td>
-      <td className="px-2 py-2 text-right">
-        <button
-          onClick={remove}
-          disabled={pending}
-          className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
-        >
-          remove
-        </button>
-      </td>
-    </tr>
+      )}
+    </>
   );
 }
 
 function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [name, setName] = useState(b.name);
-  const [principal, setPrincipal] = useState(b.principal);
-  const [days, setDays] = useState(String(b.days_elapsed));
   const [nakulha, setNakulha] = useState(b.than_nakulha);
   const [status, setStatus] = useState<BorrowerStatus>(b.status);
   const [pending, setPending] = useState(false);
-
-  const dirty = {
-    name: name !== b.name,
-    principal: principal !== b.principal,
-    days: days !== String(b.days_elapsed),
-    nakulha: nakulha !== b.than_nakulha,
-    status: status !== b.status,
-  };
+  const [expanded, setExpanded] = useState(false);
+  const [addingTranche, setAddingTranche] = useState(false);
 
   async function commit(patch: Parameters<typeof api.patchBorrower>[1]) {
     setPending(true);
@@ -295,14 +345,6 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
     } finally {
       setPending(false);
     }
-  }
-
-  async function saveField<K extends keyof Parameters<typeof api.patchBorrower>[1]>(
-    key: K,
-    val: Parameters<typeof api.patchBorrower>[1][K],
-    isDirty: boolean,
-  ) {
-    if (isDirty) await commit({ [key]: val } as Parameters<typeof api.patchBorrower>[1]);
   }
 
   async function remove() {
@@ -325,7 +367,7 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onBlur={() => saveField("name", name, dirty.name)}
+          onBlur={() => name !== b.name && commit({ name })}
           className={`${cell} flex-1 font-medium`}
         />
         <select
@@ -350,26 +392,50 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Principal">
-          <input
-            type="number"
-            step="0.01"
-            value={principal}
-            onChange={(e) => setPrincipal(e.target.value)}
-            onBlur={() => saveField("principal", principal, dirty.principal)}
-            className={`${cell} w-full text-right tabular-nums`}
-          />
+        <Field label="Total Principal">
+          <div className="mt-1 rounded-lg border border-card-border bg-bg px-2.5 py-1.5 text-right tabular-nums font-medium">
+            {formatPHP(b.principal)}
+          </div>
         </Field>
-        <Field label="Days">
-          <input
-            type="number"
-            value={days}
-            onChange={(e) => setDays(e.target.value)}
-            onBlur={() => saveField("days_elapsed", Number(days), dirty.days)}
-            className={`${cell} w-full text-right tabular-nums`}
-          />
+        <Field label={`Tranches (${b.tranches.length})`}>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-1 w-full rounded-lg border border-card-border bg-bg px-2.5 py-1.5 text-sm text-amber-soft text-left"
+          >
+            {expanded ? "▼ Hide" : "▶ View"}
+          </button>
         </Field>
       </div>
+
+      {expanded && (
+        <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-muted border-b border-card-border">
+                <th className="text-left px-3 py-1.5 font-medium">#</th>
+                <th className="text-right px-3 py-1.5 font-medium">Amount</th>
+                <th className="text-left px-3 py-1.5 font-medium">Released</th>
+                <th className="text-center px-3 py-1.5 font-medium">Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              {b.tranches.map((t, i) => (
+                <tr key={t.id} className="border-t border-card-border/50">
+                  <td className="px-3 py-1.5 text-muted">#{i + 1}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{formatPHP(t.principal)}</td>
+                  <td className="px-3 py-1.5 text-muted">
+                    {new Date(t.released_at).toLocaleDateString("en-PH", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </td>
+                  <td className="px-3 py-1.5 text-center tabular-nums">{trancheDays(t)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2 text-sm">
         <Stat label="THAN actual" value={formatPHP(b.than_actual)} tone="blue" />
@@ -383,12 +449,19 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
           step="0.01"
           value={nakulha}
           onChange={(e) => setNakulha(e.target.value)}
-          onBlur={() => saveField("than_nakulha", nakulha, dirty.nakulha)}
+          onBlur={() => nakulha !== b.than_nakulha && commit({ than_nakulha: nakulha })}
           className={`${cell} w-full text-right tabular-nums border-green-soft/40 focus:border-green-soft`}
         />
       </Field>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex items-center justify-between pt-1">
+        <button
+          onClick={() => setAddingTranche(true)}
+          disabled={pending}
+          className="text-xs text-amber-soft hover:text-white border border-amber-soft/30 hover:border-amber-soft/60 rounded px-2 py-1 disabled:opacity-60"
+        >
+          + Add release
+        </button>
         <button
           onClick={remove}
           disabled={pending}
@@ -397,6 +470,17 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
           remove borrower
         </button>
       </div>
+
+      {addingTranche && (
+        <AddTrancheModal
+          borrower={b}
+          onClose={() => setAddingTranche(false)}
+          onAdded={() => {
+            setAddingTranche(false);
+            onChange();
+          }}
+        />
+      )}
     </div>
   );
 }

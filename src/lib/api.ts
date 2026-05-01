@@ -51,17 +51,23 @@ export type ActivityEntry = {
   created_at: string;
 };
 
+export type Tranche = {
+  id: number;
+  principal: string;
+  released_at: string;
+};
+
 export type Borrower = {
   id: number;
   name: string;
   principal: string;
   balance: string;
   rate_snapshot: string;
-  days_elapsed: number;
   than_nakulha: string;
   status: BorrowerStatus;
   than_actual: string;
   than_unrealised: string;
+  tranches: Tranche[];
   activity: ActivityEntry[];
   created_at: string;
   updated_at: string;
@@ -74,13 +80,13 @@ export const api = {
   listBorrowers: () => request<Borrower[]>("GET", "/borrowers"),
   createBorrower: (body: { name: string; principal: string }) =>
     request<Borrower>("POST", "/borrowers", body),
+  addTranche: (borrowerId: number, body: { principal: string }) =>
+    request<Borrower>("POST", `/borrowers/${borrowerId}/tranches`, body),
   patchBorrower: (
     id: number,
     body: Partial<{
       name: string;
-      principal: string;
       balance: string;
-      days_elapsed: number;
       than_nakulha: string;
       status: BorrowerStatus;
     }>,
