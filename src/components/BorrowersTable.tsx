@@ -7,6 +7,7 @@ import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
 import { LatepayModal } from "./LatepayModal";
 import { BayadModal } from "./BayadModal";
+import { EditActivityModal } from "./EditActivityModal";
 
 export function BorrowersTable({
   borrowers,
@@ -203,8 +204,9 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
   return rows;
 }
 
-function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number }) {
+function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number; borrower: Borrower; onChanged: () => void }) {
   const rows = buildLedger(tranches, activity);
+  const [editing, setEditing] = useState<ActivityEntry | null>(null);
   return (
     <tr>
       <td colSpan={colSpan} className="px-4 pb-3 pt-0">
@@ -218,6 +220,7 @@ function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; ac
                 <th className="text-right px-3 py-1.5 font-medium text-blue-soft/80">THAN</th>
                 <th className="text-right px-3 py-1.5 font-medium text-green-soft/80">BAYAD</th>
                 <th className="text-right px-3 py-1.5 font-medium">BALANCE</th>
+                <th className="w-6" />
               </tr>
             </thead>
             <tbody>
@@ -258,11 +261,33 @@ function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; ac
                     </>
                   )}
                   <td className="px-3 py-1.5 text-right tabular-nums font-medium">{formatPHP(r.balance)}</td>
+                  <td className="px-1 py-1.5">
+                    {r.kind !== "palod" && (() => {
+                      const entry = activity.find((a) => a.id === r.id);
+                      return entry ? (
+                        <button
+                          onClick={() => setEditing(entry)}
+                          className="text-muted hover:text-white text-xs px-1"
+                          title="Edit"
+                        >
+                          ✎
+                        </button>
+                      ) : null;
+                    })()}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {editing && (
+          <EditActivityModal
+            borrower={borrower}
+            entry={editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => { setEditing(null); onChanged(); }}
+          />
+        )}
       </td>
     </tr>
   );
@@ -455,7 +480,7 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
           </div>
         </td>
       </tr>
-      {expanded && <LedgerSubrow tranches={b.tranches} activity={b.activity} colSpan={8} />}
+      {expanded && <LedgerSubrow tranches={b.tranches} activity={b.activity} colSpan={9} borrower={b} onChanged={onChange} />}
       {addingTranche && (
         <AddTrancheModal
           borrower={b}

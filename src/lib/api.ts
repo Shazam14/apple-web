@@ -100,6 +100,10 @@ export const api = {
     borrowerId: number,
     body: { activity_type: string; detail: string; amount?: string },
   ) => request<ActivityEntry>("POST", `/borrowers/${borrowerId}/activity`, body),
+  editActivity: (borrowerId: number, activityId: number, body: { amount?: string; detail?: string }) =>
+    request<ActivityEntry>("PATCH", `/borrowers/${borrowerId}/activity/${activityId}`, body),
+  deleteActivity: (borrowerId: number, activityId: number) =>
+    request<void>("DELETE", `/borrowers/${borrowerId}/activity/${activityId}`),
 };
 
 export function formatPHP(v: string | number, decimals = 0): string {
