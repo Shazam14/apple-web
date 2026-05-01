@@ -17,10 +17,20 @@ export function BorrowersTable({
 }) {
   const [adding, setAdding] = useState(false);
 
-  const totalLent = borrowers.reduce((a, b) => a + Number(b.principal), 0);
-  const totalActual = borrowers.reduce((a, b) => a + Number(b.than_actual), 0);
-  const totalUnreal = borrowers.reduce((a, b) => a + Number(b.than_unrealised), 0);
-  const totalNakulha = borrowers.reduce((a, b) => a + Number(b.than_nakulha), 0);
+  const totalBalance  = borrowers.reduce((a, b) => a + Number(b.balance), 0);
+  const totalReleased = borrowers.reduce((a, b) => a + Number(b.principal), 0);
+  const totalThan = borrowers.reduce((a, b) => {
+    const upfront = b.tranches.reduce((s, t) => s + Number(t.than), 0);
+    const latepay = b.activity
+      .filter((x) => x.activity_type === "LATE_INTEREST" && x.amount)
+      .reduce((s, x) => s + Number(x.amount), 0);
+    return a + upfront + latepay;
+  }, 0);
+  const totalReceived = borrowers.reduce((a, b) => {
+    return a + b.activity
+      .filter((x) => x.activity_type === "PAYMENT_RECEIVED" && x.amount)
+      .reduce((s, x) => s + Number(x.amount), 0);
+  }, 0);
 
   return (
     <Panel
@@ -77,10 +87,10 @@ export function BorrowersTable({
       )}
 
       <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Summary label="Total lent" value={formatPHP(totalLent)} tone="amber" />
-        <Summary label="THAN actual" value={formatPHP(totalActual)} tone="blue" />
-        <Summary label="Unrealised" value={formatPHP(totalUnreal)} tone="amber" />
-        <Summary label="Nakulha" value={formatPHP(totalNakulha)} tone="green" />
+        <Summary label="Balance" value={formatPHP(totalBalance)} tone="amber" />
+        <Summary label="Released" value={formatPHP(totalReleased)} tone="default" />
+        <Summary label="THAN charged" value={formatPHP(totalThan)} tone="blue" />
+        <Summary label="Received" value={formatPHP(totalReceived)} tone="green" />
       </div>
 
       {adding && (
@@ -129,14 +139,16 @@ function Summary({
 }: {
   label: string;
   value: string;
-  tone: "amber" | "blue" | "green";
+  tone: "amber" | "blue" | "green" | "default";
 }) {
   const t =
     tone === "amber"
       ? "text-amber-soft"
       : tone === "blue"
         ? "text-blue-soft"
-        : "text-green-soft";
+        : tone === "green"
+          ? "text-green-soft"
+          : "text-white";
   return (
     <div className="rounded-xl border border-card-border bg-card px-4 py-3">
       <div className="text-xs text-muted">{label}</div>
