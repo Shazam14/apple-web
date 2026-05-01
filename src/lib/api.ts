@@ -64,8 +64,10 @@ export type Borrower = {
   balance: string;
   rate_snapshot: string;
   than_nakulha: string;
+  than_override: string | null;
   status: BorrowerStatus;
   than_actual: string;
+  than_computed: string;
   than_unrealised: string;
   tranches: Tranche[];
   activity: ActivityEntry[];
@@ -88,6 +90,7 @@ export const api = {
       name: string;
       balance: string;
       than_nakulha: string;
+      than_override: string | null;
       status: BorrowerStatus;
     }>,
   ) => request<Borrower>("PATCH", `/borrowers/${id}`, body),

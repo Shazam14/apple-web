@@ -193,6 +193,48 @@ function TranchesSubrow({
   );
 }
 
+function ThanCell({
+  b,
+  onCommit,
+}: {
+  b: Borrower;
+  onCommit: (patch: Parameters<typeof api.patchBorrower>[1]) => void;
+}) {
+  const [val, setVal] = useState(b.than_override ?? "");
+  const isOverridden = b.than_override !== null && b.than_override !== undefined;
+
+  function save() {
+    const trimmed = val.toString().trim();
+    if (trimmed === "" || trimmed === b.than_computed) {
+      // clear override — fall back to computed
+      if (isOverridden) onCommit({ than_override: null });
+    } else if (trimmed !== (b.than_override ?? "").toString()) {
+      onCommit({ than_override: trimmed });
+    }
+  }
+
+  const cell = "rounded-lg border bg-card px-2 py-1 outline-none text-right tabular-nums w-full";
+
+  return (
+    <td className="px-2 py-2">
+      <input
+        type="number"
+        step="0.01"
+        value={val}
+        placeholder={b.than_computed}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={save}
+        className={`${cell} ${isOverridden ? "border-blue-soft/60 text-blue-soft" : "border-card-border text-blue-soft"} focus:border-blue-soft`}
+      />
+      {isOverridden && (
+        <div className="text-[10px] text-muted text-right mt-0.5">
+          auto {formatPHP(b.than_computed)}
+        </div>
+      )}
+    </td>
+  );
+}
+
 function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [name, setName] = useState(b.name);
   const [nakulha, setNakulha] = useState(b.than_nakulha);
@@ -203,7 +245,6 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
 
   const dirtyName = name !== b.name;
   const dirtyNakulha = nakulha !== b.than_nakulha;
-  const dirtyStatus = status !== b.status;
 
   async function commit(patch: Parameters<typeof api.patchBorrower>[1]) {
     setPending(true);
@@ -278,9 +319,7 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
             <option value="overdue">Overdue</option>
           </select>
         </td>
-        <td className="px-2 py-2 text-right text-blue-soft tabular-nums">
-          {formatPHP(b.than_actual)}
-        </td>
+        <ThanCell b={b} onCommit={commit} />
         <td className="px-2 py-2 text-right text-amber-soft tabular-nums">
           {formatPHP(b.than_unrealised)}
         </td>
@@ -326,6 +365,44 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
         />
       )}
     </>
+  );
+}
+
+function ThanCardField({
+  b,
+  onCommit,
+}: {
+  b: Borrower;
+  onCommit: (patch: Parameters<typeof api.patchBorrower>[1]) => void;
+}) {
+  const [val, setVal] = useState(b.than_override ?? "");
+  const isOverridden = b.than_override !== null && b.than_override !== undefined;
+  const cell = "rounded-lg border bg-bg px-2.5 py-1.5 outline-none text-right tabular-nums w-full";
+
+  function save() {
+    const trimmed = val.toString().trim();
+    if (trimmed === "" || trimmed === b.than_computed) {
+      if (isOverridden) onCommit({ than_override: null });
+    } else if (trimmed !== (b.than_override ?? "").toString()) {
+      onCommit({ than_override: trimmed });
+    }
+  }
+
+  return (
+    <div>
+      <input
+        type="number"
+        step="0.01"
+        value={val}
+        placeholder={b.than_computed}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={save}
+        className={`${cell} ${isOverridden ? "border-blue-soft/60 text-blue-soft" : "border-card-border text-blue-soft"} focus:border-blue-soft`}
+      />
+      <div className="text-[10px] text-muted text-right mt-0.5">
+        auto {formatPHP(b.than_computed)}
+      </div>
+    </div>
   );
 }
 
@@ -437,10 +514,14 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
         </div>
       )}
 
+      <Field label="THAN charged (override)">
+        <ThanCardField b={b} onCommit={commit} />
+      </Field>
+
       <div className="grid grid-cols-3 gap-2 text-sm">
-        <Stat label="THAN actual" value={formatPHP(b.than_actual)} tone="blue" />
         <Stat label="Unrealised" value={formatPHP(b.than_unrealised)} tone="amber" />
         <Stat label="Balance" value={formatPHP(b.balance)} />
+        <Stat label="Nakulha" value={formatPHP(b.than_nakulha)} />
       </div>
 
       <Field label="Nakulha (manual)">
