@@ -37,6 +37,7 @@ export type SettingsSummary = {
   sum_than_actual: string;
   sum_than_unrealised: string;
   sum_than_nakulha: string;
+  total_balance: string;
 };
 
 export type BorrowerStatus = "active" | "paid" | "overdue";
