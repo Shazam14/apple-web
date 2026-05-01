@@ -12,6 +12,7 @@ export function AddBorrowerModal({
 }) {
   const [name, setName] = useState("");
   const [principal, setPrincipal] = useState("");
+  const [than, setThan] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -20,7 +21,7 @@ export function AddBorrowerModal({
     setErr(null);
     setBusy(true);
     try {
-      await api.createBorrower({ name: name.trim(), principal });
+      await api.createBorrower({ name: name.trim(), principal, ...(than ? { than } : {}) });
       onCreated();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -50,17 +51,30 @@ export function AddBorrowerModal({
             className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 outline-none focus:border-amber-soft"
           />
         </label>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wider text-muted">Principal (₱)</span>
-          <input
-            type="number"
-            step="0.01"
-            value={principal}
-            onChange={(e) => setPrincipal(e.target.value)}
-            required
-            className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-right tabular-nums outline-none focus:border-amber-soft"
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-muted">Principal / Palod (₱)</span>
+            <input
+              type="number"
+              step="0.01"
+              value={principal}
+              onChange={(e) => setPrincipal(e.target.value)}
+              required
+              className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-right tabular-nums outline-none focus:border-amber-soft"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-muted">THAN upfront (₱)</span>
+            <input
+              type="number"
+              step="0.01"
+              value={than}
+              onChange={(e) => setThan(e.target.value)}
+              placeholder="0"
+              className="mt-1 w-full rounded-lg border border-blue-soft/30 bg-card px-3 py-2 text-right tabular-nums outline-none focus:border-blue-soft text-blue-soft"
+            />
+          </label>
+        </div>
         {err && (
           <div className="text-sm text-amber-soft border border-amber/40 rounded-lg px-3 py-2 bg-amber/10">
             {err}

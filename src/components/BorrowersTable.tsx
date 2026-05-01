@@ -152,7 +152,7 @@ function trancheDays(t: Tranche): number {
 }
 
 type LedgerRow =
-  | { kind: "palod"; id: number; amount: string; date: string; trancheIndex: number; balance: number }
+  | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; balance: number }
   | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
@@ -162,6 +162,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
     kind: "palod",
     id: t.id,
     amount: t.principal,
+    than: t.than ?? "0",
     date: t.released_at,
     trancheIndex: i + 1,
     balance: 0,
@@ -181,7 +182,8 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
   rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   let running = 0;
   for (const r of rows) {
-    if (r.kind === "palod" || r.kind === "than") running += Number(r.amount);
+    if (r.kind === "palod") running += Number(r.amount) + Number(r.than);
+    else if (r.kind === "than") running += Number(r.amount);
     else if (r.kind === "bayad") running -= Number(r.amount);
     r.balance = running;
   }
@@ -215,7 +217,9 @@ function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; ac
                     <>
                       <td className="px-3 py-1.5 text-muted">palod #{r.trancheIndex}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums text-amber-soft">{formatPHP(r.amount)}</td>
-                      <td className="px-3 py-1.5" />
+                      <td className="px-3 py-1.5 text-right tabular-nums text-blue-soft">
+                        {Number(r.than) > 0 ? formatPHP(r.than) : ""}
+                      </td>
                       <td className="px-3 py-1.5" />
                     </>
                   )}

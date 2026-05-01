@@ -13,6 +13,7 @@ export function AddTrancheModal({
   onAdded: () => void;
 }) {
   const [principal, setPrincipal] = useState("");
+  const [than, setThan] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -21,7 +22,7 @@ export function AddTrancheModal({
     setErr(null);
     setBusy(true);
     try {
-      await api.addTranche(borrower.id, { principal });
+      await api.addTranche(borrower.id, { principal, ...(than ? { than } : {}) });
       onAdded();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -43,18 +44,31 @@ export function AddTrancheModal({
         <h3 className="text-lg font-semibold">
           Add release — <span className="text-amber-soft">{borrower.name}</span>
         </h3>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wider text-muted">Amount (₱)</span>
-          <input
-            type="number"
-            step="0.01"
-            value={principal}
-            onChange={(e) => setPrincipal(e.target.value)}
-            required
-            autoFocus
-            className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-right tabular-nums outline-none focus:border-amber-soft"
-          />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-muted">Palod (₱)</span>
+            <input
+              type="number"
+              step="0.01"
+              value={principal}
+              onChange={(e) => setPrincipal(e.target.value)}
+              required
+              autoFocus
+              className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-right tabular-nums outline-none focus:border-amber-soft"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-muted">THAN upfront (₱)</span>
+            <input
+              type="number"
+              step="0.01"
+              value={than}
+              onChange={(e) => setThan(e.target.value)}
+              placeholder="0"
+              className="mt-1 w-full rounded-lg border border-blue-soft/30 bg-card px-3 py-2 text-right tabular-nums outline-none focus:border-blue-soft text-blue-soft"
+            />
+          </label>
+        </div>
         {err && (
           <div className="text-sm text-amber-soft border border-amber/40 rounded-lg px-3 py-2 bg-amber/10">
             {err}

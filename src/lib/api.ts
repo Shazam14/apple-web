@@ -54,6 +54,7 @@ export type ActivityEntry = {
 export type Tranche = {
   id: number;
   principal: string;
+  than: string;
   released_at: string;
 };
 
@@ -80,9 +81,9 @@ export const api = {
   updateSettings: (body: { total_capital: string; cash_on_hand: string; daily_rate: string }) =>
     request<SettingsSummary>("PUT", "/settings", body),
   listBorrowers: () => request<Borrower[]>("GET", "/borrowers"),
-  createBorrower: (body: { name: string; principal: string }) =>
+  createBorrower: (body: { name: string; principal: string; than?: string }) =>
     request<Borrower>("POST", "/borrowers", body),
-  addTranche: (borrowerId: number, body: { principal: string }) =>
+  addTranche: (borrowerId: number, body: { principal: string; than?: string }) =>
     request<Borrower>("POST", `/borrowers/${borrowerId}/tranches`, body),
   patchBorrower: (
     id: number,
