@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Borrower, Tranche, BorrowerStatus, api, formatPHP } from "@/lib/api";
+import { Borrower, Tranche, ActivityEntry, BorrowerStatus, api, formatPHP } from "@/lib/api";
 import { Panel } from "./Card";
 import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
+import { LatepayModal } from "./LatepayModal";
 
 export function BorrowersTable({
   borrowers,
@@ -150,13 +151,37 @@ function trancheDays(t: Tranche): number {
   return Math.max(1, diff + 1);
 }
 
-function TranchesSubrow({
-  tranches,
-  colSpan,
-}: {
-  tranches: Tranche[];
-  colSpan: number;
-}) {
+type LedgerRow =
+  | { kind: "palod"; id: number; amount: string; date: string; trancheIndex: number }
+  | { kind: "than"; id: number; amount: string; detail: string; date: string }
+  | { kind: "bayad"; id: number; amount: string; detail: string; date: string }
+  | { kind: "note"; id: number; detail: string; date: string };
+
+function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[] {
+  const rows: LedgerRow[] = tranches.map((t, i) => ({
+    kind: "palod",
+    id: t.id,
+    amount: t.principal,
+    date: t.released_at,
+    trancheIndex: i + 1,
+  }));
+  for (const a of activity) {
+    if (a.activity_type === "Late interest" && a.amount) {
+      rows.push({ kind: "than", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at });
+    } else if (
+      (a.activity_type === "Payment received" || a.activity_type === "Partial payment") &&
+      a.amount
+    ) {
+      rows.push({ kind: "bayad", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at });
+    } else if (a.activity_type === "Missed collection") {
+      rows.push({ kind: "note", id: a.id, detail: a.detail ?? "Missed collection", date: a.created_at });
+    }
+  }
+  return rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+function LedgerSubrow({ tranches, activity, colSpan }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number }) {
+  const rows = buildLedger(tranches, activity);
   return (
     <tr>
       <td colSpan={colSpan} className="px-4 pb-3 pt-0">
@@ -164,25 +189,48 @@ function TranchesSubrow({
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted border-b border-card-border">
-                <th className="text-left px-3 py-1.5 font-medium">Tranche</th>
-                <th className="text-right px-3 py-1.5 font-medium">Principal</th>
-                <th className="text-left px-3 py-1.5 font-medium">Released</th>
-                <th className="text-center px-3 py-1.5 font-medium">Days</th>
+                <th className="text-left px-3 py-1.5 font-medium">Date</th>
+                <th className="text-left px-3 py-1.5 font-medium">Type</th>
+                <th className="text-right px-3 py-1.5 font-medium text-amber-soft/80">PALOD</th>
+                <th className="text-right px-3 py-1.5 font-medium text-blue-soft/80">THAN</th>
+                <th className="text-right px-3 py-1.5 font-medium text-green-soft/80">BAYAD</th>
               </tr>
             </thead>
             <tbody>
-              {tranches.map((t, i) => (
-                <tr key={t.id} className="border-t border-card-border/50">
-                  <td className="px-3 py-1.5 text-muted">#{i + 1}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{formatPHP(t.principal)}</td>
+              {rows.map((r) => (
+                <tr key={`${r.kind}-${r.id}`} className="border-t border-card-border/50">
                   <td className="px-3 py-1.5 text-muted">
-                    {new Date(t.released_at).toLocaleDateString("en-PH", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {new Date(r.date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                   </td>
-                  <td className="px-3 py-1.5 text-center tabular-nums">{trancheDays(t)}</td>
+                  {r.kind === "palod" && (
+                    <>
+                      <td className="px-3 py-1.5 text-muted">palod #{r.trancheIndex}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-amber-soft">{formatPHP(r.amount)}</td>
+                      <td className="px-3 py-1.5" />
+                      <td className="px-3 py-1.5" />
+                    </>
+                  )}
+                  {r.kind === "than" && (
+                    <>
+                      <td className="px-3 py-1.5 text-muted">{r.detail}</td>
+                      <td className="px-3 py-1.5" />
+                      <td className="px-3 py-1.5 text-right tabular-nums text-blue-soft">{formatPHP(r.amount)}</td>
+                      <td className="px-3 py-1.5" />
+                    </>
+                  )}
+                  {r.kind === "bayad" && (
+                    <>
+                      <td className="px-3 py-1.5 text-muted">{r.detail}</td>
+                      <td className="px-3 py-1.5" />
+                      <td className="px-3 py-1.5" />
+                      <td className="px-3 py-1.5 text-right tabular-nums text-green-soft">{formatPHP(r.amount)}</td>
+                    </>
+                  )}
+                  {r.kind === "note" && (
+                    <>
+                      <td className="px-3 py-1.5 text-amber-soft/80" colSpan={3}>{r.detail}</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -242,6 +290,7 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [pending, setPending] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [addingTranche, setAddingTranche] = useState(false);
+  const [addingLatepay, setAddingLatepay] = useState(false);
 
   const dirtyName = name !== b.name;
   const dirtyNakulha = nakulha !== b.than_nakulha;
@@ -344,6 +393,13 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
               + release
             </button>
             <button
+              onClick={() => setAddingLatepay(true)}
+              disabled={pending}
+              className="text-xs text-blue-soft hover:text-white border border-blue-soft/30 hover:border-blue-soft/60 rounded px-1.5 py-0.5 disabled:opacity-60"
+            >
+              + latepay
+            </button>
+            <button
               onClick={remove}
               disabled={pending}
               className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
@@ -353,13 +409,23 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
           </div>
         </td>
       </tr>
-      {expanded && <TranchesSubrow tranches={b.tranches} colSpan={8} />}
+      {expanded && <LedgerSubrow tranches={b.tranches} activity={b.activity} colSpan={8} />}
       {addingTranche && (
         <AddTrancheModal
           borrower={b}
           onClose={() => setAddingTranche(false)}
           onAdded={() => {
             setAddingTranche(false);
+            onChange();
+          }}
+        />
+      )}
+      {addingLatepay && (
+        <LatepayModal
+          borrower={b}
+          onClose={() => setAddingLatepay(false)}
+          onAdded={() => {
+            setAddingLatepay(false);
             onChange();
           }}
         />

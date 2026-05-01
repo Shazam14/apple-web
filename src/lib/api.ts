@@ -95,6 +95,10 @@ export const api = {
     }>,
   ) => request<Borrower>("PATCH", `/borrowers/${id}`, body),
   deleteBorrower: (id: number) => request<void>("DELETE", `/borrowers/${id}`),
+  addActivity: (
+    borrowerId: number,
+    body: { activity_type: string; detail: string; amount?: string },
+  ) => request<ActivityEntry>("POST", `/borrowers/${borrowerId}/activity`, body),
 };
 
 export function formatPHP(v: string | number, decimals = 0): string {
