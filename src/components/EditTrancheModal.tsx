@@ -19,6 +19,7 @@ export function EditTrancheModal({
   const [principal, setPrincipal] = useState(tranche.principal);
   const [than, setThan] = useState(tranche.than);
   const [label, setLabel] = useState(tranche.label ?? "");
+  const [tenor, setTenor] = useState<number | null>(tranche.tenor_days ?? null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -27,7 +28,12 @@ export function EditTrancheModal({
     setErr(null);
     setBusy(true);
     try {
-      await api.patchTranche(borrower.id, tranche.id, { principal, than, label: label.trim() });
+      await api.patchTranche(borrower.id, tranche.id, {
+        principal,
+        than,
+        label: label.trim(),
+        tenor_days: tenor,
+      });
       onSaved();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -96,6 +102,28 @@ export function EditTrancheModal({
             className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 outline-none focus:border-amber-soft"
           />
         </label>
+
+        <div>
+          <span className="text-xs uppercase tracking-wider text-muted">
+            Term <span className="normal-case text-muted/60">— kanus-a bayaran? (optional)</span>
+          </span>
+          <div className="mt-1 grid grid-cols-4 gap-2">
+            {([null, 5, 15, 30] as const).map((v) => (
+              <button
+                type="button"
+                key={String(v)}
+                onClick={() => setTenor(v)}
+                className={`rounded-lg border px-2 py-1.5 text-sm ${
+                  tenor === v
+                    ? "border-amber-soft bg-amber-soft/10 text-amber-soft"
+                    : "border-card-border bg-card text-muted hover:border-amber-soft/50"
+                }`}
+              >
+                {v === null ? "None" : `${v}d`}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {err && (
           <div className="text-sm text-amber-soft border border-amber/40 rounded-lg px-3 py-2 bg-amber/10">

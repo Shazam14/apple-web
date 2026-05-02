@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Borrower, Tranche, ActivityEntry, BorrowerStatus, api, formatPHP } from "@/lib/api";
+import { trancheDueState, summariseBorrowerDue, DueState } from "@/lib/due";
 import { Panel } from "./Card";
 import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
@@ -166,8 +167,49 @@ function trancheDays(t: Tranche): number {
   return Math.max(1, diff + 1);
 }
 
+function DueBadge({ state, tenorDays }: { state: DueState; tenorDays: number }) {
+  if (state.kind === "none") return null;
+  const cls =
+    state.kind === "overdue"
+      ? "border-red-500/50 text-red-400 bg-red-500/10"
+      : state.kind === "today"
+        ? "border-amber-soft/60 text-amber-soft bg-amber-soft/10"
+        : state.kind === "soon"
+          ? "border-amber-soft/30 text-amber-soft/80"
+          : "border-card-border text-muted";
+  return (
+    <span className={`inline-flex items-center border rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cls}`}>
+      {tenorDays}d · {state.label}
+    </span>
+  );
+}
+
+function DueChips({ b }: { b: Borrower }) {
+  const s = summariseBorrowerDue(b);
+  if (s.overdue + s.today + s.soon === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {s.overdue > 0 && (
+        <span className="inline-flex items-center border border-red-500/50 text-red-400 bg-red-500/10 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          📅 {s.overdue} overdue
+        </span>
+      )}
+      {s.today > 0 && (
+        <span className="inline-flex items-center border border-amber-soft/60 text-amber-soft bg-amber-soft/10 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          ⏰ {s.today} due today
+        </span>
+      )}
+      {s.soon > 0 && (
+        <span className="inline-flex items-center border border-amber-soft/30 text-amber-soft/80 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          🔔 {s.soon} due soon
+        </span>
+      )}
+    </div>
+  );
+}
+
 type LedgerRow =
-  | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; label: string | null; balance: number }
+  | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; label: string | null; tenor_days: number | null; balance: number }
   | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
@@ -181,6 +223,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
     date: t.released_at,
     trancheIndex: i + 1,
     label: t.label ?? null,
+    tenor_days: t.tenor_days ?? null,
     balance: 0,
   }));
   for (const a of activity) {
@@ -234,10 +277,22 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                   {r.kind === "palod" && (
                     <>
                       <td className="px-2 sm:px-3 py-1.5 text-muted">
-                        <span>palod #{r.trancheIndex}</span>
-                        {r.label && (
-                          <span className="ml-1.5 text-amber-soft/90 font-medium">· {r.label}</span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span>palod #{r.trancheIndex}</span>
+                          {r.label && (
+                            <span className="text-amber-soft/90 font-medium">· {r.label}</span>
+                          )}
+                          {r.tenor_days && (
+                            <DueBadge state={trancheDueState({
+                              id: r.id,
+                              principal: r.amount,
+                              than: r.than,
+                              label: r.label,
+                              tenor_days: r.tenor_days,
+                              released_at: r.date,
+                            })} tenorDays={r.tenor_days} />
+                          )}
+                        </div>
                       </td>
                       <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-amber-soft">{formatPHP(r.amount)}</td>
                       <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-blue-soft">
@@ -434,6 +489,9 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
                 ×{b.tranches.length}
               </span>
             )}
+          </div>
+          <div className="mt-1.5 pl-6">
+            <DueChips b={b} />
           </div>
         </td>
         <td className="px-2 py-2 text-right tabular-nums font-medium">
@@ -665,6 +723,8 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
           <option value="overdue">Overdue</option>
         </select>
       </div>
+
+      <DueChips b={b} />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Total Principal">
