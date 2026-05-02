@@ -205,14 +205,13 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
   return rows;
 }
 
-function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number; borrower: Borrower; onChanged: () => void }) {
+function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; borrower: Borrower; onChanged: () => void }) {
   const rows = buildLedger(tranches, activity);
   const [editing, setEditing] = useState<ActivityEntry | null>(null);
   const [editingTranche, setEditingTranche] = useState<{ tranche: Tranche; index: number } | null>(null);
   return (
-    <tr>
-      <td colSpan={colSpan} className="px-4 pb-3 pt-0">
-        <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
+    <>
+      <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted border-b border-card-border">
@@ -310,6 +309,15 @@ function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tr
             onSaved={() => { setEditingTranche(null); onChanged(); }}
           />
         )}
+    </>
+  );
+}
+
+function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number; borrower: Borrower; onChanged: () => void }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-4 pb-3 pt-0">
+        <LedgerContent tranches={tranches} activity={activity} borrower={borrower} onChanged={onChanged} />
       </td>
     </tr>
   );
@@ -593,6 +601,10 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [pending, setPending] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [addingTranche, setAddingTranche] = useState(false);
+  const [addingLatepay, setAddingLatepay] = useState(false);
+  const [addingAccrual, setAddingAccrual] = useState(false);
+  const [addingBayad, setAddingBayad] = useState(false);
+  const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
 
   async function commit(patch: Parameters<typeof api.patchBorrower>[1]) {
     setPending(true);
@@ -654,7 +666,7 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
             {formatPHP(b.principal)}
           </div>
         </Field>
-        <Field label={`Tranches (${b.tranches.length})`}>
+        <Field label="Ledger">
           <button
             onClick={() => setExpanded((v) => !v)}
             className="mt-1 w-full rounded-lg border border-card-border bg-bg px-2.5 py-1.5 text-sm text-amber-soft text-left"
@@ -665,33 +677,7 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
       </div>
 
       {expanded && (
-        <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-muted border-b border-card-border">
-                <th className="text-left px-3 py-1.5 font-medium">#</th>
-                <th className="text-right px-3 py-1.5 font-medium">Amount</th>
-                <th className="text-left px-3 py-1.5 font-medium">Released</th>
-                <th className="text-center px-3 py-1.5 font-medium">Days</th>
-              </tr>
-            </thead>
-            <tbody>
-              {b.tranches.map((t, i) => (
-                <tr key={t.id} className="border-t border-card-border/50">
-                  <td className="px-3 py-1.5 text-muted">#{i + 1}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{formatPHP(t.principal)}</td>
-                  <td className="px-3 py-1.5 text-muted">
-                    {new Date(t.released_at).toLocaleDateString("en-PH", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="px-3 py-1.5 text-center tabular-nums">{trancheDays(t)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <LedgerContent tranches={b.tranches} activity={b.activity} borrower={b} onChanged={onChange} />
       )}
 
       <Field label="THAN charged (override)">
@@ -715,20 +701,42 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
         />
       </Field>
 
-      <div className="flex items-center justify-between pt-1">
+      <div className="flex flex-wrap gap-2 pt-1">
         <button
           onClick={() => setAddingTranche(true)}
           disabled={pending}
           className="text-xs text-amber-soft hover:text-white border border-amber-soft/30 hover:border-amber-soft/60 rounded px-2 py-1 disabled:opacity-60"
         >
-          + Add release
+          + release
+        </button>
+        <button
+          onClick={() => setAddingLatepay(true)}
+          disabled={pending}
+          className="text-xs text-blue-soft hover:text-white border border-blue-soft/30 hover:border-blue-soft/60 rounded px-2 py-1 disabled:opacity-60"
+        >
+          + latepay
+        </button>
+        <button
+          onClick={() => setAddingAccrual(true)}
+          disabled={pending}
+          title={`Post today's interest: ₱${dailyInterest}`}
+          className="text-xs text-blue-soft/70 hover:text-white border border-blue-soft/20 hover:border-blue-soft/60 rounded px-2 py-1 disabled:opacity-60"
+        >
+          + interest
+        </button>
+        <button
+          onClick={() => setAddingBayad(true)}
+          disabled={pending}
+          className="text-xs text-green-soft hover:text-white border border-green-soft/30 hover:border-green-soft/60 rounded px-2 py-1 disabled:opacity-60"
+        >
+          + bayad
         </button>
         <button
           onClick={remove}
           disabled={pending}
-          className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
+          className="ml-auto text-xs text-muted hover:text-amber-soft disabled:opacity-60"
         >
-          remove borrower
+          remove
         </button>
       </div>
 
@@ -738,6 +746,37 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
           onClose={() => setAddingTranche(false)}
           onAdded={() => {
             setAddingTranche(false);
+            onChange();
+          }}
+        />
+      )}
+      {addingLatepay && (
+        <LatepayModal
+          borrower={b}
+          onClose={() => setAddingLatepay(false)}
+          onAdded={() => {
+            setAddingLatepay(false);
+            onChange();
+          }}
+        />
+      )}
+      {addingAccrual && (
+        <LatepayModal
+          borrower={b}
+          defaultAmount={dailyInterest}
+          onClose={() => setAddingAccrual(false)}
+          onAdded={() => {
+            setAddingAccrual(false);
+            onChange();
+          }}
+        />
+      )}
+      {addingBayad && (
+        <BayadModal
+          borrower={b}
+          onClose={() => setAddingBayad(false)}
+          onAdded={() => {
+            setAddingBayad(false);
             onChange();
           }}
         />
