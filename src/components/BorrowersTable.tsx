@@ -8,6 +8,7 @@ import { AddTrancheModal } from "./AddTrancheModal";
 import { LatepayModal } from "./LatepayModal";
 import { BayadModal } from "./BayadModal";
 import { EditActivityModal } from "./EditActivityModal";
+import { EditTrancheModal } from "./EditTrancheModal";
 
 export function BorrowersTable({
   borrowers,
@@ -207,6 +208,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
 function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; colSpan: number; borrower: Borrower; onChanged: () => void }) {
   const rows = buildLedger(tranches, activity);
   const [editing, setEditing] = useState<ActivityEntry | null>(null);
+  const [editingTranche, setEditingTranche] = useState<{ tranche: Tranche; index: number } | null>(null);
   return (
     <tr>
       <td colSpan={colSpan} className="px-4 pb-3 pt-0">
@@ -262,7 +264,18 @@ function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tr
                   )}
                   <td className="px-3 py-1.5 text-right tabular-nums font-medium">{formatPHP(r.balance)}</td>
                   <td className="px-1 py-1.5">
-                    {r.kind !== "palod" && (() => {
+                    {r.kind === "palod" ? (() => {
+                      const tranche = tranches.find((t) => t.id === r.id);
+                      return tranche ? (
+                        <button
+                          onClick={() => setEditingTranche({ tranche, index: r.trancheIndex })}
+                          className="text-muted hover:text-white text-xs px-1"
+                          title="Edit release"
+                        >
+                          ✎
+                        </button>
+                      ) : null;
+                    })() : (() => {
                       const entry = activity.find((a) => a.id === r.id);
                       return entry ? (
                         <button
@@ -286,6 +299,15 @@ function LedgerSubrow({ tranches, activity, colSpan, borrower, onChanged }: { tr
             entry={editing}
             onClose={() => setEditing(null)}
             onSaved={() => { setEditing(null); onChanged(); }}
+          />
+        )}
+        {editingTranche && (
+          <EditTrancheModal
+            borrower={borrower}
+            tranche={editingTranche.tranche}
+            trancheIndex={editingTranche.index}
+            onClose={() => setEditingTranche(null)}
+            onSaved={() => { setEditingTranche(null); onChanged(); }}
           />
         )}
       </td>

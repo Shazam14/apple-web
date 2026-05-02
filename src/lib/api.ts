@@ -86,6 +86,8 @@ export const api = {
     request<Borrower>("POST", "/borrowers", body),
   addTranche: (borrowerId: number, body: { principal: string; than?: string }) =>
     request<Borrower>("POST", `/borrowers/${borrowerId}/tranches`, body),
+  patchTranche: (borrowerId: number, trancheId: number, body: { principal?: string; than?: string }) =>
+    request<Borrower>("PATCH", `/borrowers/${borrowerId}/tranches/${trancheId}`, body),
   patchBorrower: (
     id: number,
     body: Partial<{
