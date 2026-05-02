@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, Borrower, SettingsSummary } from "@/lib/api";
 import { getToken, logout } from "@/lib/auth";
 import { CapitalOverview } from "@/components/CapitalOverview";
+import { EarningsOverview } from "@/components/EarningsOverview";
 import { RateSettings } from "@/components/RateSettings";
 import { BorrowersTable } from "@/components/BorrowersTable";
 
@@ -154,6 +155,7 @@ export default function DashboardPage() {
 
       <GettingStarted />
       <CapitalOverview s={summary} />
+      <EarningsOverview s={summary} borrowers={borrowers} />
       <RateSettings s={summary} onSaved={() => load()} />
       <BorrowersTable borrowers={borrowers} onChange={load} />
     </main>
