@@ -74,7 +74,7 @@ export function RateSettings({
               className={cellInput}
             />
           </Row>
-          <Row label="Total capital" suffix="₱">
+          <Row label="Total puhunan" suffix="₱">
             <input
               type="number"
               step="0.01"

@@ -7,12 +7,12 @@ export function CapitalOverview({ s }: { s: SettingsSummary }) {
   return (
     <Panel title="Capital overview">
       <div className="mb-3 rounded-xl border border-card-border bg-card px-4 sm:px-5 py-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-xs text-muted">Total balance outstanding</span>
+        <span className="text-xs text-muted">CAPITAL SA PALOD</span>
         <span className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-soft break-all">{formatPHP(s.total_balance)}</span>
         <span className="text-xs text-muted sm:ml-auto whitespace-nowrap">{s.total_borrowers} borrowers</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label="Total capital" value={formatPHP(s.total_capital)} subtitle="All funds" />
+        <StatCard label="TOTAL PUHUNAN" value={formatPHP(s.total_capital)} subtitle="All funds" />
         <StatCard
           label="Lent out"
           value={formatPHP(s.lent_out)}

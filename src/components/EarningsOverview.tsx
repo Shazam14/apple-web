@@ -153,7 +153,7 @@ export function EarningsOverview({
         {/* ── Right: Cash position ── */}
         <div className="space-y-3">
           <div className="rounded-xl border border-card-border bg-card px-4 py-4 space-y-2">
-            <FormulaRow label="Total capital" value={formatPHP(s.total_capital)} />
+            <FormulaRow label="Total puhunan" value={formatPHP(s.total_capital)} />
             <FormulaRow label="− Currently lent" value={`−${formatPHP(s.lent_out)}`} tone="muted" />
             <FormulaRow label="+ THAN collected" value={`+${formatPHP(s.sum_than_nakulha)}`} tone="green" />
             <FormulaRow
