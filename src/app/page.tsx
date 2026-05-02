@@ -40,6 +40,11 @@ const STEPS = [
     title: "I-record ang bayad",
     body: "I-klik ang \"+ bayad\" sa borrower row. Sulod ang amount ug note (e.g. \"toa ub sim\" o \"cash\"). Ma-deduct dayon sa balance ug makita sa ledger.",
   },
+  {
+    icon: "💡",
+    title: "Tan-awa ang imong kwarta (Cash & Earnings)",
+    body: "Human mag-bayad ang borrower, adto sa Cash & Earnings panel. Wala: makita ang THAN nakuha nimo matag borrower. Tuo: formula — capital minus lent plus collected = cash available. Sa ubos: 💸 Spend = THAN profit nimo gamiton, 🔄 Re-lend = idle capital pwede pa i-pautang o i-deposit.",
+  },
 ];
 
 function GettingStarted() {
