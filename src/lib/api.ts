@@ -56,6 +56,7 @@ export type Tranche = {
   id: number;
   principal: string;
   than: string;
+  label: string | null;
   released_at: string;
 };
 
@@ -82,11 +83,11 @@ export const api = {
   updateSettings: (body: { total_capital: string; cash_on_hand: string; daily_rate: string }) =>
     request<SettingsSummary>("PUT", "/settings", body),
   listBorrowers: () => request<Borrower[]>("GET", "/borrowers"),
-  createBorrower: (body: { name: string; principal: string; than?: string }) =>
+  createBorrower: (body: { name: string; principal: string; than?: string; label?: string }) =>
     request<Borrower>("POST", "/borrowers", body),
-  addTranche: (borrowerId: number, body: { principal: string; than?: string }) =>
+  addTranche: (borrowerId: number, body: { principal: string; than?: string; label?: string }) =>
     request<Borrower>("POST", `/borrowers/${borrowerId}/tranches`, body),
-  patchTranche: (borrowerId: number, trancheId: number, body: { principal?: string; than?: string }) =>
+  patchTranche: (borrowerId: number, trancheId: number, body: { principal?: string; than?: string; label?: string }) =>
     request<Borrower>("PATCH", `/borrowers/${borrowerId}/tranches/${trancheId}`, body),
   patchBorrower: (
     id: number,

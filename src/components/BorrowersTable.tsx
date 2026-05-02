@@ -167,7 +167,7 @@ function trancheDays(t: Tranche): number {
 }
 
 type LedgerRow =
-  | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; balance: number }
+  | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; label: string | null; balance: number }
   | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
@@ -180,6 +180,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
     than: t.than ?? "0",
     date: t.released_at,
     trancheIndex: i + 1,
+    label: t.label ?? null,
     balance: 0,
   }));
   for (const a of activity) {
@@ -211,57 +212,62 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
   const [editingTranche, setEditingTranche] = useState<{ tranche: Tranche; index: number } | null>(null);
   return (
     <>
-      <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
-          <table className="w-full text-xs">
+      <div className="rounded-lg border border-card-border bg-card/40 overflow-x-auto">
+          <table className="w-full min-w-[560px] text-xs">
             <thead>
               <tr className="text-muted border-b border-card-border">
-                <th className="text-left px-3 py-1.5 font-medium">Date</th>
-                <th className="text-left px-3 py-1.5 font-medium">Type</th>
-                <th className="text-right px-3 py-1.5 font-medium text-amber-soft/80">PALOD</th>
-                <th className="text-right px-3 py-1.5 font-medium text-blue-soft/80">THAN</th>
-                <th className="text-right px-3 py-1.5 font-medium text-green-soft/80">BAYAD</th>
-                <th className="text-right px-3 py-1.5 font-medium">BALANCE</th>
+                <th className="text-left px-2 sm:px-3 py-1.5 font-medium">Date</th>
+                <th className="text-left px-2 sm:px-3 py-1.5 font-medium">Type</th>
+                <th className="text-right px-2 sm:px-3 py-1.5 font-medium text-amber-soft/80">PALOD</th>
+                <th className="text-right px-2 sm:px-3 py-1.5 font-medium text-blue-soft/80">THAN</th>
+                <th className="text-right px-2 sm:px-3 py-1.5 font-medium text-green-soft/80">BAYAD</th>
+                <th className="text-right px-2 sm:px-3 py-1.5 font-medium">BALANCE</th>
                 <th className="w-6" />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={`${r.kind}-${r.id}`} className="border-t border-card-border/50">
-                  <td className="px-3 py-1.5 text-muted">
+                  <td className="px-2 sm:px-3 py-1.5 text-muted">
                     {new Date(r.date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                   </td>
                   {r.kind === "palod" && (
                     <>
-                      <td className="px-3 py-1.5 text-muted">palod #{r.trancheIndex}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-amber-soft">{formatPHP(r.amount)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-blue-soft">
+                      <td className="px-2 sm:px-3 py-1.5 text-muted">
+                        <span>palod #{r.trancheIndex}</span>
+                        {r.label && (
+                          <span className="ml-1.5 text-amber-soft/90 font-medium">· {r.label}</span>
+                        )}
+                      </td>
+                      <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-amber-soft">{formatPHP(r.amount)}</td>
+                      <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-blue-soft">
                         {Number(r.than) > 0 ? formatPHP(r.than) : ""}
                       </td>
-                      <td className="px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5" />
                     </>
                   )}
                   {r.kind === "than" && (
                     <>
-                      <td className="px-3 py-1.5 text-muted">{r.detail}</td>
-                      <td className="px-3 py-1.5" />
-                      <td className="px-3 py-1.5 text-right tabular-nums text-blue-soft">{formatPHP(r.amount)}</td>
-                      <td className="px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5 text-muted">{r.detail}</td>
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-blue-soft">{formatPHP(r.amount)}</td>
+                      <td className="px-2 sm:px-3 py-1.5" />
                     </>
                   )}
                   {r.kind === "bayad" && (
                     <>
-                      <td className="px-3 py-1.5 text-muted">{r.detail}</td>
-                      <td className="px-3 py-1.5" />
-                      <td className="px-3 py-1.5" />
-                      <td className="px-3 py-1.5 text-right tabular-nums text-green-soft">{formatPHP(r.amount)}</td>
+                      <td className="px-2 sm:px-3 py-1.5 text-muted">{r.detail}</td>
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-green-soft">{formatPHP(r.amount)}</td>
                     </>
                   )}
                   {r.kind === "note" && (
                     <>
-                      <td className="px-3 py-1.5 text-amber-soft/80" colSpan={4}>{r.detail}</td>
+                      <td className="px-2 sm:px-3 py-1.5 text-amber-soft/80" colSpan={4}>{r.detail}</td>
                     </>
                   )}
-                  <td className="px-3 py-1.5 text-right tabular-nums font-medium">{formatPHP(r.balance)}</td>
+                  <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums font-medium">{formatPHP(r.balance)}</td>
                   <td className="px-1 py-1.5">
                     {r.kind === "palod" ? (() => {
                       const tranche = tranches.find((t) => t.id === r.id);

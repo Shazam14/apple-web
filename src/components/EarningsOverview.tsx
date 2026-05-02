@@ -87,10 +87,10 @@ function Bucket({
   const bg = tone === "green" ? "bg-green-soft/5" : "bg-blue-soft/5";
   const valCls = tone === "green" ? "text-green-soft" : "text-blue-soft";
   return (
-    <div className={`rounded-xl border ${border} ${bg} px-4 py-3 text-center`}>
+    <div className={`rounded-xl border ${border} ${bg} px-3 py-3 text-center min-w-0`}>
       <div className="text-xl mb-1">{icon}</div>
       <div className="text-xs text-muted uppercase tracking-wider">{label}</div>
-      <div className={`mt-1 text-xl font-bold tabular-nums ${valCls}`}>{value}</div>
+      <div className={`mt-1 text-base sm:text-xl font-bold tabular-nums ${valCls} break-all`}>{value}</div>
       <div className="text-[10px] text-muted/60 mt-0.5">{sub}</div>
     </div>
   );
@@ -130,18 +130,18 @@ export function EarningsOverview({
               borrowers.map((b) => (
                 <div
                   key={b.id}
-                  className="flex items-center justify-between px-3 py-2 border-t border-card-border/50 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 border-t border-card-border/50 text-sm"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <StatusDot status={b.status} />
                     <span className="truncate">{b.name}</span>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-green-soft tabular-nums text-xs">
-                      {formatPHP(b.than_nakulha)} collected
+                  <div className="flex items-center gap-3 ml-auto">
+                    <span className="text-green-soft tabular-nums text-xs whitespace-nowrap">
+                      {formatPHP(b.than_nakulha)} <span className="text-muted/70">collected</span>
                     </span>
-                    <span className="text-amber-soft/70 tabular-nums text-xs">
-                      {formatPHP(b.than_unrealised)} owed
+                    <span className="text-amber-soft/70 tabular-nums text-xs whitespace-nowrap">
+                      {formatPHP(b.than_unrealised)} <span className="text-muted/70">owed</span>
                     </span>
                   </div>
                 </div>

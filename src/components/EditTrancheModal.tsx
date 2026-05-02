@@ -18,6 +18,7 @@ export function EditTrancheModal({
 }) {
   const [principal, setPrincipal] = useState(tranche.principal);
   const [than, setThan] = useState(tranche.than);
+  const [label, setLabel] = useState(tranche.label ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ export function EditTrancheModal({
     setErr(null);
     setBusy(true);
     try {
-      await api.patchTranche(borrower.id, tranche.id, { principal, than });
+      await api.patchTranche(borrower.id, tranche.id, { principal, than, label: label.trim() });
       onSaved();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -82,6 +83,19 @@ export function EditTrancheModal({
             />
           </label>
         </div>
+
+        <label className="block">
+          <span className="text-xs uppercase tracking-wider text-muted">
+            Label <span className="normal-case text-muted/60">— para sa unsa? (optional)</span>
+          </span>
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            maxLength={120}
+            placeholder="e.g. sari-sari, tricycle, school fee"
+            className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 outline-none focus:border-amber-soft"
+          />
+        </label>
 
         {err && (
           <div className="text-sm text-amber-soft border border-amber/40 rounded-lg px-3 py-2 bg-amber/10">

@@ -14,6 +14,7 @@ export function AddTrancheModal({
 }) {
   const [principal, setPrincipal] = useState("");
   const [than, setThan] = useState("");
+  const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -22,7 +23,12 @@ export function AddTrancheModal({
     setErr(null);
     setBusy(true);
     try {
-      await api.addTranche(borrower.id, { principal, ...(than ? { than } : {}) });
+      const trimmed = label.trim();
+      await api.addTranche(borrower.id, {
+        principal,
+        ...(than ? { than } : {}),
+        ...(trimmed ? { label: trimmed } : {}),
+      });
       onAdded();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -69,6 +75,18 @@ export function AddTrancheModal({
             />
           </label>
         </div>
+        <label className="block">
+          <span className="text-xs uppercase tracking-wider text-muted">
+            Label <span className="normal-case text-muted/60">— para sa unsa? (optional)</span>
+          </span>
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            maxLength={120}
+            placeholder="e.g. sari-sari, tricycle, school fee"
+            className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 outline-none focus:border-amber-soft"
+          />
+        </label>
         {err && (
           <div className="text-sm text-amber-soft border border-amber/40 rounded-lg px-3 py-2 bg-amber/10">
             {err}
