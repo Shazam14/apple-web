@@ -96,7 +96,12 @@ export function EditTrancheModal({
     [principal, ratePct, releasedISO, tenorDays, periodDays],
   );
 
-  const onTimeTotal = calc.baseInterest > 0 ? Number(principal) + calc.baseInterest : Number(principal);
+  const onTimeTotal =
+    calc.interestAtDue > 0
+      ? Number(principal) + calc.interestAtDue
+      : calc.dailyInterest > 0
+        ? Number(principal) + calc.dailyInterest
+        : Number(principal);
   const showLateNow = calc.daysLate > 0 && calc.totalLateFee > 0;
 
   async function submit(e: React.FormEvent) {
@@ -106,7 +111,7 @@ export function EditTrancheModal({
     try {
       await api.patchTranche(borrower.id, tranche.id, {
         principal,
-        than: calc.baseInterest > 0 ? calc.baseInterest.toFixed(2) : "0",
+        than: calc.dailyInterest > 0 ? calc.dailyInterest.toFixed(2) : "0",
         label: label.trim(),
         tenor_days: tenorDays,
         rate_pct: ratePct && Number(ratePct) > 0 ? ratePct : null,
@@ -178,10 +183,10 @@ export function EditTrancheModal({
           </label>
         </div>
 
-        {calc.baseInterest > 0 && (
+        {calc.dailyInterest > 0 && (
           <div className="text-xs text-muted -mt-2 ml-1">
-            = <span className="text-amber-soft tabular-nums">{formatPHP(calc.baseInterest, 2)}</span>{" "}
-            base interest (THAN)
+            = <span className="text-amber-soft tabular-nums">{formatPHP(calc.dailyInterest, 2)}</span>
+            {" "}/ adlaw THAN
           </div>
         )}
 
@@ -244,9 +249,9 @@ export function EditTrancheModal({
               </option>
             ))}
           </select>
-          {periodDays !== null && calc.baseInterest > 0 && (
+          {periodDays !== null && calc.dailyInterest > 0 && (
             <div className="mt-1 text-xs text-muted ml-1">
-              = +<span className="text-amber-soft tabular-nums">{formatPHP(calc.baseInterest, 2)}</span>{" "}
+              = +<span className="text-amber-soft tabular-nums">{formatPHP(calc.dailyInterest, 2)}</span>{" "}
               kada {periodDays} adlaw nga ulahi
             </div>
           )}
@@ -266,10 +271,12 @@ export function EditTrancheModal({
           />
         </label>
 
-        {(onTimeTotal > 0 || calc.baseInterest > 0) && (
+        {(onTimeTotal > 0 || calc.dailyInterest > 0) && (
           <div className="rounded-xl border border-amber-soft/30 bg-amber-soft/5 p-3 space-y-1.5">
             <div className="flex justify-between items-baseline">
-              <span className="text-xs uppercase tracking-wider text-muted">Pagka-due</span>
+              <span className="text-xs uppercase tracking-wider text-muted">
+                Pagka-due{tenorDays ? ` (sa ${tenorDays} ka adlaw)` : ""}
+              </span>
               <span className="text-lg font-semibold tabular-nums text-amber-soft">
                 {formatPHP(onTimeTotal, 2)}
               </span>
@@ -280,16 +287,18 @@ export function EditTrancheModal({
                 <span className="tabular-nums">+{formatPHP(calc.totalLateFee, 2)}</span>
               </div>
             ) : (
-              periodDays !== null && calc.baseInterest > 0 && (
+              periodDays !== null && calc.dailyInterest > 0 && (
                 <div className="flex justify-between items-baseline text-xs text-muted/80">
                   <span>+ kada ulahi {periodDays === 1 ? "adlaw" : `${periodDays} adlaw`}</span>
-                  <span className="tabular-nums">+{formatPHP(calc.baseInterest, 2)}</span>
+                  <span className="tabular-nums">+{formatPHP(calc.dailyInterest, 2)}</span>
                 </div>
               )
             )}
             <div className="text-[10px] text-muted/60 pt-1 border-t border-amber-soft/20">
               {Number(principal) > 0 && Number(ratePct) > 0
-                ? `${formatPHP(Number(principal), 0)} × ${ratePct}% = ${formatPHP(calc.baseInterest, 2)}`
+                ? tenorDays
+                  ? `${formatPHP(Number(principal), 0)} × ${ratePct}% × ${tenorDays} adlaw = ${formatPHP(calc.interestAtDue, 2)} THAN`
+                  : `${formatPHP(Number(principal), 0)} × ${ratePct}% = ${formatPHP(calc.dailyInterest, 2)}/adlaw`
                 : "Walay rate — base interest = ₱0"}
             </div>
           </div>

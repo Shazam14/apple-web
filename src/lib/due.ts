@@ -74,7 +74,9 @@ export type CalcInputs = {
 };
 
 export type CalcResult = {
-  baseInterest: number;
+  dailyInterest: number;   // principal × rate% — one day's interest unit
+  baseInterest: number;    // accrued from released_at → asOf, capped at tenor
+  interestAtDue: number;   // dailyInterest × tenorDays (0 if no tenor)
   daysLate: number;
   periodsLate: number;
   totalLateFee: number;
@@ -84,7 +86,7 @@ export type CalcResult = {
 
 export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcResult {
   const { principal, ratePct, releasedAt, tenorDays, lateFeePeriodDays } = input;
-  const baseInterest = principal > 0 && ratePct > 0 ? principal * (ratePct / 100) : 0;
+  const dailyInterest = principal > 0 && ratePct > 0 ? principal * (ratePct / 100) : 0;
 
   let dueDate: Date | null = null;
   if (tenorDays && tenorDays > 0) {
@@ -93,8 +95,21 @@ export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcRes
     dueDate.setHours(0, 0, 0, 0);
   }
 
+  const interestAtDue = tenorDays && tenorDays > 0 ? dailyInterest * tenorDays : 0;
+
   const today = new Date(asOf);
   today.setHours(0, 0, 0, 0);
+  const released = new Date(releasedAt);
+  released.setHours(0, 0, 0, 0);
+  const daysSinceRelease = Math.round((today.getTime() - released.getTime()) / 86_400_000);
+
+  // Backend convention: release day counts as 1 day's interest. Cap at tenor.
+  let accruedDays = 0;
+  if (daysSinceRelease >= 0) {
+    const raw = daysSinceRelease + 1;
+    accruedDays = tenorDays && tenorDays > 0 ? Math.min(raw, tenorDays) : raw;
+  }
+  const baseInterest = dailyInterest * accruedDays;
 
   let daysLate = 0;
   if (dueDate) {
@@ -104,10 +119,10 @@ export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcRes
 
   const period = lateFeePeriodDays ?? 0;
   const periodsLate = period > 0 && daysLate > 0 ? Math.floor(daysLate / period) : 0;
-  const totalLateFee = periodsLate * baseInterest;
+  const totalLateFee = periodsLate * dailyInterest;
   const totalOwed = principal + baseInterest + totalLateFee;
 
-  return { baseInterest, daysLate, periodsLate, totalLateFee, totalOwed, dueDate };
+  return { dailyInterest, baseInterest, interestAtDue, daysLate, periodsLate, totalLateFee, totalOwed, dueDate };
 }
 
 export function lateFeeFor(t: Tranche, b?: Borrower, asOf?: Date): CalcResult {

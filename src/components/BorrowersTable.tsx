@@ -222,7 +222,7 @@ function TrancheLateBadge({ t, b }: { t: Tranche; b: Borrower }) {
   if (calc.totalLateFee <= 0) return null;
   return (
     <span
-      title={`${calc.periodsLate} period × ${formatPHP(calc.baseInterest, 2)} = ${formatPHP(calc.totalLateFee, 2)}`}
+      title={`${calc.periodsLate} period × ${formatPHP(calc.dailyInterest, 2)} = ${formatPHP(calc.totalLateFee, 2)}`}
       className="inline-flex items-center border border-red-500/60 text-red-400 bg-red-500/10 rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap tabular-nums"
     >
       💸 +{formatPHP(calc.totalLateFee, 0)}
