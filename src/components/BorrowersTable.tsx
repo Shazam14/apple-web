@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Borrower, Tranche, ActivityEntry, BorrowerStatus, api, formatPHP } from "@/lib/api";
-import { trancheDueState, summariseBorrowerDue, DueState } from "@/lib/due";
+import { trancheDueState, summariseBorrowerDue, DueState, totalLateFeesFor, lateFeeFor } from "@/lib/due";
 import { Panel } from "./Card";
 import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
@@ -186,7 +186,8 @@ function DueBadge({ state, tenorDays }: { state: DueState; tenorDays: number }) 
 
 function DueChips({ b }: { b: Borrower }) {
   const s = summariseBorrowerDue(b);
-  if (s.overdue + s.today + s.soon === 0) return null;
+  const lateFees = totalLateFeesFor(b);
+  if (s.overdue + s.today + s.soon === 0 && lateFees <= 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {s.overdue > 0 && (
@@ -204,7 +205,28 @@ function DueChips({ b }: { b: Borrower }) {
           🔔 {s.soon} due soon
         </span>
       )}
+      {lateFees > 0 && (
+        <span
+          title="Multa nga wala pa ma-bayad. Computed = principal × rate × periods late."
+          className="inline-flex items-center border border-red-500/60 text-red-400 bg-red-500/10 rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums"
+        >
+          💸 +{formatPHP(lateFees, 0)} multa
+        </span>
+      )}
     </div>
+  );
+}
+
+function TrancheLateBadge({ t, b }: { t: Tranche; b: Borrower }) {
+  const calc = lateFeeFor(t, b);
+  if (calc.totalLateFee <= 0) return null;
+  return (
+    <span
+      title={`${calc.periodsLate} period × ${formatPHP(calc.baseInterest, 2)} = ${formatPHP(calc.totalLateFee, 2)}`}
+      className="inline-flex items-center border border-red-500/60 text-red-400 bg-red-500/10 rounded px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap tabular-nums"
+    >
+      💸 +{formatPHP(calc.totalLateFee, 0)}
+    </span>
   );
 }
 
@@ -282,16 +304,20 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                           {r.label && (
                             <span className="text-amber-soft/90 font-medium">· {r.label}</span>
                           )}
-                          {r.tenor_days && (
-                            <DueBadge state={trancheDueState({
-                              id: r.id,
-                              principal: r.amount,
-                              than: r.than,
-                              label: r.label,
-                              tenor_days: r.tenor_days,
-                              released_at: r.date,
-                            })} tenorDays={r.tenor_days} />
-                          )}
+                          {(() => {
+                            const tranche = tranches.find((t) => t.id === r.id);
+                            return (
+                              <>
+                                {r.tenor_days && tranche && (
+                                  <DueBadge
+                                    state={trancheDueState(tranche)}
+                                    tenorDays={r.tenor_days}
+                                  />
+                                )}
+                                {tranche && <TrancheLateBadge t={tranche} b={borrower} />}
+                              </>
+                            );
+                          })()}
                         </div>
                       </td>
                       <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-amber-soft">{formatPHP(r.amount)}</td>

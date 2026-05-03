@@ -1,6 +1,7 @@
 "use client";
 
 import { SettingsSummary, Borrower, BorrowerStatus, formatPHP } from "@/lib/api";
+import { totalLateFeesFor } from "@/lib/due";
 import { Panel } from "./Card";
 
 function StatBox({
@@ -106,6 +107,7 @@ export function EarningsOverview({
   const idleCapital = Number(s.total_capital) - Number(s.lent_out);
   const thanCollected = Number(s.sum_than_nakulha);
   const cashAvailable = idleCapital + thanCollected;
+  const totalLatePending = borrowers.reduce((acc, b) => acc + totalLateFeesFor(b), 0);
 
   return (
     <Panel title="Cash & Earnings">
@@ -120,6 +122,17 @@ export function EarningsOverview({
             <StatBox label="⏳ Still owed" value={formatPHP(s.sum_than_unrealised)} sub="unrealised" tone="amber" />
           </div>
 
+          {totalLatePending > 0 && (
+            <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-3 py-2 flex items-center justify-between">
+              <span className="text-xs text-muted">
+                💸 Multa pending <span className="text-muted/60">(late fees not yet posted)</span>
+              </span>
+              <span className="text-base font-semibold tabular-nums text-red-400">
+                +{formatPHP(totalLatePending)}
+              </span>
+            </div>
+          )}
+
           <div className="rounded-lg border border-card-border bg-card/40 overflow-hidden">
             <div className="px-3 py-2 border-b border-card-border">
               <span className="text-[11px] uppercase tracking-wider text-muted">THAN per borrower</span>
@@ -127,25 +140,33 @@ export function EarningsOverview({
             {borrowers.length === 0 ? (
               <div className="px-3 py-3 text-xs text-muted">No borrowers yet</div>
             ) : (
-              borrowers.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 border-t border-card-border/50 text-sm"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <StatusDot status={b.status} />
-                    <span className="truncate">{b.name}</span>
+              borrowers.map((b) => {
+                const lateFees = totalLateFeesFor(b);
+                return (
+                  <div
+                    key={b.id}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 border-t border-card-border/50 text-sm"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <StatusDot status={b.status} />
+                      <span className="truncate">{b.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3 ml-auto flex-wrap">
+                      <span className="text-green-soft tabular-nums text-xs whitespace-nowrap">
+                        {formatPHP(b.than_nakulha)} <span className="text-muted/70">collected</span>
+                      </span>
+                      <span className="text-amber-soft/70 tabular-nums text-xs whitespace-nowrap">
+                        {formatPHP(b.than_unrealised)} <span className="text-muted/70">owed</span>
+                      </span>
+                      {lateFees > 0 && (
+                        <span className="text-red-400 tabular-nums text-xs whitespace-nowrap">
+                          +{formatPHP(lateFees)} <span className="text-muted/70">multa</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 ml-auto">
-                    <span className="text-green-soft tabular-nums text-xs whitespace-nowrap">
-                      {formatPHP(b.than_nakulha)} <span className="text-muted/70">collected</span>
-                    </span>
-                    <span className="text-amber-soft/70 tabular-nums text-xs whitespace-nowrap">
-                      {formatPHP(b.than_unrealised)} <span className="text-muted/70">owed</span>
-                    </span>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

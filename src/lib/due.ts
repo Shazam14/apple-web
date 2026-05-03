@@ -62,3 +62,75 @@ export function summariseBorrowerDue(b: Borrower): BorrowerDueSummary {
   }
   return { overdue, today, soon };
 }
+
+// ── Calculator math (per-tranche rate × period) ─────────────────────────
+
+export type CalcInputs = {
+  principal: number;
+  ratePct: number;
+  releasedAt: Date;
+  tenorDays: number | null;
+  lateFeePeriodDays: number | null;
+};
+
+export type CalcResult = {
+  baseInterest: number;
+  daysLate: number;
+  periodsLate: number;
+  totalLateFee: number;
+  totalOwed: number;
+  dueDate: Date | null;
+};
+
+export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcResult {
+  const { principal, ratePct, releasedAt, tenorDays, lateFeePeriodDays } = input;
+  const baseInterest = principal > 0 && ratePct > 0 ? principal * (ratePct / 100) : 0;
+
+  let dueDate: Date | null = null;
+  if (tenorDays && tenorDays > 0) {
+    dueDate = new Date(releasedAt);
+    dueDate.setDate(dueDate.getDate() + tenorDays);
+    dueDate.setHours(0, 0, 0, 0);
+  }
+
+  const today = new Date(asOf);
+  today.setHours(0, 0, 0, 0);
+
+  let daysLate = 0;
+  if (dueDate) {
+    const ms = today.getTime() - dueDate.getTime();
+    daysLate = Math.max(0, Math.round(ms / 86_400_000));
+  }
+
+  const period = lateFeePeriodDays ?? 0;
+  const periodsLate = period > 0 && daysLate > 0 ? Math.floor(daysLate / period) : 0;
+  const totalLateFee = periodsLate * baseInterest;
+  const totalOwed = principal + baseInterest + totalLateFee;
+
+  return { baseInterest, daysLate, periodsLate, totalLateFee, totalOwed, dueDate };
+}
+
+export function lateFeeFor(t: Tranche, b?: Borrower, asOf?: Date): CalcResult {
+  const ratePctRaw = t.rate_pct ?? b?.rate_snapshot ?? "0";
+  return computeCalc(
+    {
+      principal: Number(t.principal),
+      ratePct: Number(ratePctRaw),
+      releasedAt: new Date(t.released_at),
+      tenorDays: t.tenor_days,
+      lateFeePeriodDays: t.late_fee_period_days,
+    },
+    asOf,
+  );
+}
+
+// Sum of all unpaid late-fee accruals across a borrower's tranches.
+// Honours per-tranche rate_pct, falls back to borrower rate_snapshot.
+export function totalLateFeesFor(b: Borrower, asOf?: Date): number {
+  if (b.status === "paid") return 0;
+  let total = 0;
+  for (const t of b.tranches) {
+    total += lateFeeFor(t, b, asOf).totalLateFee;
+  }
+  return total;
+}
