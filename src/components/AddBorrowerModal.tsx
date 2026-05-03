@@ -85,7 +85,13 @@ export function AddBorrowerModal({
     setBusy(true);
     try {
       const trimmed = label.trim();
-      const baseThan = calc.dailyInterest > 0 ? calc.dailyInterest.toFixed(2) : undefined;
+      const thanValue =
+        calc.interestAtDue > 0
+          ? calc.interestAtDue
+          : calc.dailyInterest > 0
+            ? calc.dailyInterest
+            : 0;
+      const baseThan = thanValue > 0 ? thanValue.toFixed(2) : undefined;
       await api.createBorrower({
         name: name.trim(),
         principal,

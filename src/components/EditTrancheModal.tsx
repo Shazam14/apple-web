@@ -109,9 +109,21 @@ export function EditTrancheModal({
     setErr(null);
     setBusy(true);
     try {
+      const principalChanged = Number(principal) !== Number(tranche.principal);
+      const ratePctChanged = Number(ratePct || 0) !== Number(tranche.rate_pct || 0);
+      const tenorChanged = (tenorDays ?? null) !== (tranche.tenor_days ?? null);
+      const thanChanged = principalChanged || ratePctChanged || tenorChanged;
+
+      const thanValue =
+        calc.interestAtDue > 0
+          ? calc.interestAtDue
+          : calc.dailyInterest > 0
+            ? calc.dailyInterest
+            : 0;
+
       await api.patchTranche(borrower.id, tranche.id, {
         principal,
-        than: calc.dailyInterest > 0 ? calc.dailyInterest.toFixed(2) : "0",
+        ...(thanChanged ? { than: thanValue.toFixed(2) } : {}),
         label: label.trim(),
         tenor_days: tenorDays,
         rate_pct: ratePct && Number(ratePct) > 0 ? ratePct : null,
