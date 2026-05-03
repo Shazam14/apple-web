@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { api, Borrower, formatPHP } from "@/lib/api";
 import { computeCalc } from "@/lib/due";
+import { RangeCalendar } from "./RangeCalendar";
 
 const PERIOD_OPTIONS: Array<{ value: number | null; label: string }> = [
   { value: null, label: "Wala — di mag-multa" },
@@ -26,15 +27,6 @@ function Hint({ text }: { text: string }) {
 
 function todayISO(): string {
   const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function addDaysISO(iso: string, days: number): string {
-  const d = new Date(iso + "T00:00:00");
-  d.setDate(d.getDate() + days);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -87,11 +79,6 @@ export function AddTrancheModal({
   );
 
   const onTimeTotal = calc.baseInterest > 0 ? Number(principal) + calc.baseInterest : 0;
-  const periodLabel = PERIOD_OPTIONS.find((o) => o.value === periodDays)?.label ?? "";
-
-  function quickTenor(days: number) {
-    setDueISO(addDaysISO(releasedISO, days));
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -226,37 +213,8 @@ export function AddTrancheModal({
           )}
         </div>
 
-        {/* Quick tenor buttons */}
-        <div>
-          <span className="text-xs uppercase tracking-wider text-muted">Quick term</span>
-          <div className="mt-1 grid grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => setDueISO("")}
-              className={`rounded-lg border px-2 py-1.5 text-sm ${
-                dueISO === ""
-                  ? "border-amber-soft bg-amber-soft/10 text-amber-soft"
-                  : "border-card-border bg-card text-muted hover:border-amber-soft/50"
-              }`}
-            >
-              Wala
-            </button>
-            {[5, 15, 30].map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => quickTenor(d)}
-                className={`rounded-lg border px-2 py-1.5 text-sm ${
-                  tenorDays === d
-                    ? "border-amber-soft bg-amber-soft/10 text-amber-soft"
-                    : "border-card-border bg-card text-muted hover:border-amber-soft/50"
-                }`}
-              >
-                +{d}d
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Visual range calendar — tap a day to set Due */}
+        <RangeCalendar releasedISO={releasedISO} dueISO={dueISO} onPick={setDueISO} />
 
         {/* Late-fee period dropdown */}
         <label className="block">

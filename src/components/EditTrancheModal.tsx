@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { api, Borrower, Tranche, formatPHP } from "@/lib/api";
 import { computeCalc } from "@/lib/due";
+import { RangeCalendar } from "./RangeCalendar";
 
 const PERIOD_OPTIONS: Array<{ value: number | null; label: string }> = [
   { value: null, label: "Wala — di mag-multa" },
@@ -207,36 +208,7 @@ export function EditTrancheModal({
           </div>
         )}
 
-        <div>
-          <span className="text-xs uppercase tracking-wider text-muted">Quick term</span>
-          <div className="mt-1 grid grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => setDueISO("")}
-              className={`rounded-lg border px-2 py-1.5 text-sm ${
-                dueISO === ""
-                  ? "border-amber-soft bg-amber-soft/10 text-amber-soft"
-                  : "border-card-border bg-card text-muted hover:border-amber-soft/50"
-              }`}
-            >
-              Wala
-            </button>
-            {[5, 15, 30].map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDueISO(addDaysISO(releasedISO, d))}
-                className={`rounded-lg border px-2 py-1.5 text-sm ${
-                  tenorDays === d
-                    ? "border-amber-soft bg-amber-soft/10 text-amber-soft"
-                    : "border-card-border bg-card text-muted hover:border-amber-soft/50"
-                }`}
-              >
-                +{d}d
-              </button>
-            ))}
-          </div>
-        </div>
+        <RangeCalendar releasedISO={releasedISO} dueISO={dueISO} onPick={setDueISO} />
 
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-muted">
