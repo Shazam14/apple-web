@@ -214,7 +214,14 @@ export function AddTrancheModal({
         </div>
 
         {/* Visual range calendar — tap a day to set Due */}
-        <RangeCalendar releasedISO={releasedISO} dueISO={dueISO} onPick={setDueISO} />
+        <RangeCalendar
+          releasedISO={releasedISO}
+          dueISO={dueISO}
+          onPick={setDueISO}
+          principal={Number(principal) || 0}
+          ratePct={Number(ratePct) || 0}
+          lateFeePeriodDays={periodDays}
+        />
 
         {/* Late-fee period dropdown */}
         <label className="block">

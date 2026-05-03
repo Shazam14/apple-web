@@ -70,6 +70,7 @@ export type TrancheBody = {
   tenor_days?: number | null;
   rate_pct?: string | null;
   late_fee_period_days?: number | null;
+  released_at?: string;
 };
 
 export type Borrower = {

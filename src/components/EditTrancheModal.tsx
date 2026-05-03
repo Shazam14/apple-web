@@ -65,9 +65,13 @@ export function EditTrancheModal({
 }) {
   const [principal, setPrincipal] = useState(tranche.principal);
   const [ratePct, setRatePct] = useState<string>(inferInitialRate(tranche, borrower));
-  const releasedISO = useMemo(() => isoFromDate(new Date(tranche.released_at)), [tranche.released_at]);
+  const originalReleasedISO = useMemo(
+    () => isoFromDate(new Date(tranche.released_at)),
+    [tranche.released_at],
+  );
+  const [releasedISO, setReleasedISO] = useState<string>(originalReleasedISO);
   const [dueISO, setDueISO] = useState<string>(
-    tranche.tenor_days ? addDaysISO(releasedISO, tranche.tenor_days) : "",
+    tranche.tenor_days ? addDaysISO(originalReleasedISO, tranche.tenor_days) : "",
   );
   const [periodDays, setPeriodDays] = useState<number | null>(tranche.late_fee_period_days);
   const [label, setLabel] = useState(tranche.label ?? "");
@@ -107,6 +111,9 @@ export function EditTrancheModal({
         tenor_days: tenorDays,
         rate_pct: ratePct && Number(ratePct) > 0 ? ratePct : null,
         late_fee_period_days: periodDays,
+        ...(releasedISO !== originalReleasedISO
+          ? { released_at: `${releasedISO}T00:00:00` }
+          : {}),
       });
       onSaved();
     } catch (e) {
@@ -179,18 +186,22 @@ export function EditTrancheModal({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <span className="text-xs uppercase tracking-wider text-muted">Released</span>
-            <div className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-card/60 border border-card-border/50 text-sm text-muted">
-              <span>📅</span>
-              <span>{releasedISO}</span>
-              <span className="text-muted/60 text-[10px]">(locked)</span>
-            </div>
-          </div>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-muted">
+              Released
+              <Hint text="Pwede usbon ang petsa kanus-a gihatag ang kwarta." />
+            </span>
+            <input
+              type="date"
+              value={releasedISO}
+              onChange={(e) => setReleasedISO(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 outline-none focus:border-amber-soft"
+            />
+          </label>
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-muted">
               Due
-              <Hint text="Pwede usbon ang deadline. Quick buttons sa ubos." />
+              <Hint text="Pwede usbon ang deadline. Pili sa calendar sa ubos." />
             </span>
             <input
               type="date"
@@ -208,7 +219,14 @@ export function EditTrancheModal({
           </div>
         )}
 
-        <RangeCalendar releasedISO={releasedISO} dueISO={dueISO} onPick={setDueISO} />
+        <RangeCalendar
+          releasedISO={releasedISO}
+          dueISO={dueISO}
+          onPick={setDueISO}
+          principal={Number(principal) || 0}
+          ratePct={Number(ratePct) || 0}
+          lateFeePeriodDays={periodDays}
+        />
 
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-muted">

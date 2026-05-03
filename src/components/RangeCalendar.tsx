@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { computeCalc } from "@/lib/due";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const MONTHS = [
@@ -65,10 +66,16 @@ export function RangeCalendar({
   releasedISO,
   dueISO,
   onPick,
+  principal,
+  ratePct,
+  lateFeePeriodDays,
 }: {
   releasedISO: string;
   dueISO: string;
   onPick: (iso: string) => void;
+  principal?: number;
+  ratePct?: number;
+  lateFeePeriodDays?: number | null;
 }) {
   const initial = useMemo(() => parseISO(dueISO || releasedISO) ?? parseISO(todayISO())!, [releasedISO, dueISO]);
   const [viewY, setViewY] = useState(initial.y);
@@ -95,6 +102,28 @@ export function RangeCalendar({
   }
 
   const tenor = dueISO ? Math.max(0, diffDays(releasedISO, dueISO)) : 0;
+
+  const showAmounts =
+    typeof principal === "number" && principal > 0 && typeof ratePct === "number" && ratePct > 0;
+  const tenorForCalc = dueISO ? Math.max(0, diffDays(releasedISO, dueISO)) : null;
+  const releasedDate = useMemo(() => new Date(releasedISO + "T00:00:00"), [releasedISO]);
+
+  function amountFor(iso: string): string | null {
+    if (!showAmounts || iso < releasedISO) return null;
+    const result = computeCalc(
+      {
+        principal: principal!,
+        ratePct: ratePct!,
+        releasedAt: releasedDate,
+        tenorDays: tenorForCalc,
+        lateFeePeriodDays: lateFeePeriodDays ?? null,
+      },
+      new Date(iso + "T00:00:00"),
+    );
+    const n = Math.round(result.totalOwed);
+    if (n >= 1000) return `₱${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
+    return `₱${n}`;
+  }
 
   return (
     <div className="rounded-xl border border-card-border bg-card/40 p-3">
@@ -137,8 +166,11 @@ export function RangeCalendar({
           const isToday = c.iso === today;
           const disabled = isPast;
 
+          const amt = amountFor(c.iso);
+
           let cls =
-            "h-8 sm:h-9 text-xs rounded-md flex items-center justify-center select-none transition-colors";
+            "rounded-md flex flex-col items-center justify-center select-none transition-colors px-0.5";
+          cls += amt ? " h-11 sm:h-12 py-1" : " h-8 sm:h-9";
           if (!c.inMonth) cls += " text-muted/30";
           else if (disabled) cls += " text-muted/30 cursor-not-allowed";
           else cls += " text-foreground cursor-pointer hover:bg-amber-soft/10";
@@ -156,10 +188,13 @@ export function RangeCalendar({
               disabled={disabled}
               onClick={() => !disabled && !isReleased && onPick(c.iso)}
               className={cls}
-              aria-label={c.iso}
-              title={c.iso}
+              aria-label={amt ? `${c.iso} ${amt}` : c.iso}
+              title={amt ? `${c.iso} — ${amt}` : c.iso}
             >
-              {c.day}
+              <span className="text-xs leading-none">{c.day}</span>
+              {amt && (
+                <span className="text-[9px] leading-none mt-0.5 tabular-nums opacity-80">{amt}</span>
+              )}
             </button>
           );
         })}

@@ -214,7 +214,14 @@ export function AddBorrowerModal({
           )}
         </div>
 
-        <RangeCalendar releasedISO={releasedISO} dueISO={dueISO} onPick={setDueISO} />
+        <RangeCalendar
+          releasedISO={releasedISO}
+          dueISO={dueISO}
+          onPick={setDueISO}
+          principal={Number(principal) || 0}
+          ratePct={Number(ratePct) || 0}
+          lateFeePeriodDays={periodDays}
+        />
 
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-muted">
