@@ -287,7 +287,7 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                 <th className="text-right px-2 sm:px-3 py-1.5 font-medium text-blue-soft/80">THAN</th>
                 <th className="text-right px-2 sm:px-3 py-1.5 font-medium text-green-soft/80">BAYAD</th>
                 <th className="text-right px-2 sm:px-3 py-1.5 font-medium">BALANCE</th>
-                <th className="w-6" />
+                <th className="w-12" />
               </tr>
             </thead>
             <tbody>
@@ -353,13 +353,31 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                     {r.kind === "palod" ? (() => {
                       const tranche = tranches.find((t) => t.id === r.id);
                       return tranche ? (
-                        <button
-                          onClick={() => setEditingTranche({ tranche, index: r.trancheIndex })}
-                          className="text-muted hover:text-white text-xs px-1"
-                          title="Edit release"
-                        >
-                          ✎
-                        </button>
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button
+                            onClick={() => setEditingTranche({ tranche, index: r.trancheIndex })}
+                            className="text-muted hover:text-white text-xs px-1"
+                            title="Edit release"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const labelPart = tranche.label ? ` (${tranche.label})` : "";
+                              if (!confirm(`Delete palod #${r.trancheIndex} — ${formatPHP(tranche.principal)}${labelPart}?\n\nBalance will drop by ${formatPHP(Number(tranche.principal) + Number(tranche.than))}.`)) return;
+                              try {
+                                await api.deleteTranche(borrower.id, tranche.id);
+                                onChanged();
+                              } catch (e) {
+                                alert(`Failed to delete: ${e instanceof Error ? e.message : String(e)}`);
+                              }
+                            }}
+                            className="text-muted hover:text-red-400 text-xs px-1"
+                            title="Delete release"
+                          >
+                            🗑
+                          </button>
+                        </div>
                       ) : null;
                     })() : (() => {
                       const entry = activity.find((a) => a.id === r.id);

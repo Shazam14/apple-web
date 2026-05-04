@@ -102,6 +102,8 @@ export const api = {
     request<Borrower>("POST", `/borrowers/${borrowerId}/tranches`, body),
   patchTranche: (borrowerId: number, trancheId: number, body: Partial<TrancheBody>) =>
     request<Borrower>("PATCH", `/borrowers/${borrowerId}/tranches/${trancheId}`, body),
+  deleteTranche: (borrowerId: number, trancheId: number) =>
+    request<void>("DELETE", `/borrowers/${borrowerId}/tranches/${trancheId}`),
   patchBorrower: (
     id: number,
     body: Partial<{
