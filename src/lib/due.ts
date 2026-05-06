@@ -103,10 +103,11 @@ export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcRes
   released.setHours(0, 0, 0, 0);
   const daysSinceRelease = Math.round((today.getTime() - released.getTime()) / 86_400_000);
 
-  // Backend convention: release day counts as 1 day's interest. Cap at tenor.
+  // Backend convention: upfront THAN covers the first calendar day; accrual
+  // starts the day after. floor at 1 (matches backend max(1, days)).
   let accruedDays = 0;
   if (daysSinceRelease >= 0) {
-    const raw = daysSinceRelease + 1;
+    const raw = Math.max(1, daysSinceRelease);
     accruedDays = tenorDays && tenorDays > 0 ? Math.min(raw, tenorDays) : raw;
   }
   const baseInterest = dailyInterest * accruedDays;
