@@ -236,12 +236,12 @@ type LedgerRow =
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
 
-function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[] {
+function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: Borrower): LedgerRow[] {
   const rows: LedgerRow[] = tranches.map((t, i) => ({
     kind: "palod",
     id: t.id,
     amount: t.principal,
-    than: t.than ?? "0",
+    than: lateFeeFor(t, borrower).baseInterest.toFixed(2),
     date: t.released_at,
     trancheIndex: i + 1,
     label: t.label ?? null,
@@ -272,7 +272,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[]): LedgerRow[
 }
 
 function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; borrower: Borrower; onChanged: () => void }) {
-  const rows = buildLedger(tranches, activity);
+  const rows = buildLedger(tranches, activity, borrower);
   const [editing, setEditing] = useState<ActivityEntry | null>(null);
   const [editingTranche, setEditingTranche] = useState<{ tranche: Tranche; index: number } | null>(null);
   return (
