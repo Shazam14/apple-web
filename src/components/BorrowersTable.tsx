@@ -232,6 +232,7 @@ function TrancheLateBadge({ t, b }: { t: Tranche; b: Borrower }) {
 
 type LedgerRow =
   | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; label: string | null; tenor_days: number | null; balance: number }
+  | { kind: "latefee"; id: string; amount: string; detail: string; date: string; balance: number }
   | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
@@ -261,14 +262,39 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
     }
   }
   rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  let running = 0;
+
+  // Insert a synthetic late-fee row right after each palod row that has accrued
+  // a late fee. Late fees only compute when a tranche has a tenor_days set.
+  const withLate: LedgerRow[] = [];
   for (const r of rows) {
+    withLate.push(r);
+    if (r.kind === "palod") {
+      const tranche = tranches.find((t) => t.id === r.id);
+      if (tranche) {
+        const calc = lateFeeFor(tranche, borrower);
+        if (calc.totalLateFee > 0) {
+          withLate.push({
+            kind: "latefee",
+            id: `late-${tranche.id}`,
+            amount: calc.totalLateFee.toFixed(2),
+            detail: `palod #${r.trancheIndex} late fee (${calc.periodsLate}× ${formatPHP(calc.dailyInterest, 2)})`,
+            date: r.date,
+            balance: 0,
+          });
+        }
+      }
+    }
+  }
+
+  let running = 0;
+  for (const r of withLate) {
     if (r.kind === "palod") running += Number(r.amount) + Number(r.than);
+    else if (r.kind === "latefee") running += Number(r.amount);
     else if (r.kind === "than") running += Number(r.amount);
     else if (r.kind === "bayad") running -= Number(r.amount);
     r.balance = running;
   }
-  return rows;
+  return withLate;
 }
 
 function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; borrower: Borrower; onChanged: () => void }) {
@@ -335,6 +361,14 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                       <td className="px-2 sm:px-3 py-1.5" />
                     </>
                   )}
+                  {r.kind === "latefee" && (
+                    <>
+                      <td className="px-2 sm:px-3 py-1.5 text-red-400/90">{r.detail}</td>
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-red-400">+{formatPHP(r.amount)}</td>
+                      <td className="px-2 sm:px-3 py-1.5" />
+                    </>
+                  )}
                   {r.kind === "bayad" && (
                     <>
                       <td className="px-2 sm:px-3 py-1.5 text-muted">{r.detail}</td>
@@ -379,7 +413,7 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                           </button>
                         </div>
                       ) : null;
-                    })() : (() => {
+                    })() : r.kind === "latefee" ? null : (() => {
                       const entry = activity.find((a) => a.id === r.id);
                       return entry ? (
                         <button
