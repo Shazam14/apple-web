@@ -15,7 +15,7 @@ export function dueStateFor(releasedAt: string, tenorDays: number | null): DueSt
   if (!tenorDays || tenorDays <= 0) return NONE;
   const released = new Date(releasedAt);
   const due = new Date(released);
-  due.setDate(due.getDate() + tenorDays);
+  due.setDate(due.getDate() + tenorDays - 1);
   due.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -91,7 +91,7 @@ export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcRes
   let dueDate: Date | null = null;
   if (tenorDays && tenorDays > 0) {
     dueDate = new Date(releasedAt);
-    dueDate.setDate(dueDate.getDate() + tenorDays);
+    dueDate.setDate(dueDate.getDate() + tenorDays - 1);
     dueDate.setHours(0, 0, 0, 0);
   }
 
@@ -103,11 +103,11 @@ export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcRes
   released.setHours(0, 0, 0, 0);
   const daysSinceRelease = Math.round((today.getTime() - released.getTime()) / 86_400_000);
 
-  // Backend convention: upfront THAN covers the first calendar day; accrual
-  // starts the day after. floor at 1 (matches backend max(1, days)).
+  // Backend: max(1, daysSinceRelease + 1) — release day counts as charge #1,
+  // every day after compounds another rate%.
   let accruedDays = 0;
   if (daysSinceRelease >= 0) {
-    const raw = Math.max(1, daysSinceRelease);
+    const raw = Math.max(1, daysSinceRelease + 1);
     accruedDays = tenorDays && tenorDays > 0 ? Math.min(raw, tenorDays) : raw;
   }
   const baseInterest = dailyInterest * accruedDays;
