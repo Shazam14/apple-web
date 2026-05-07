@@ -233,6 +233,7 @@ function TrancheLateBadge({ t, b }: { t: Tranche; b: Borrower }) {
 type LedgerRow =
   | { kind: "palod"; id: number; amount: string; than: string; date: string; trancheIndex: number; label: string | null; tenor_days: number | null; balance: number }
   | { kind: "latefee"; id: string; amount: string; detail: string; date: string; balance: number }
+  | { kind: "graceday"; id: string; detail: string; date: string; balance: number }
   | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
@@ -284,7 +285,25 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
       }
     }
   }
-  const allRows = [...rows, ...lateRows];
+  // Insert a faded "due date — grace, walay multa" marker on each unique
+  // due date that has already arrived. Pure timeline affordance — no math.
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const graceDates = new Map<number, number>();
+  for (const t of tranches) {
+    const calc = lateFeeFor(t, borrower);
+    if (calc.dueDate && calc.dueDate.getTime() <= todayStart.getTime()) {
+      graceDates.set(calc.dueDate.getTime(), (graceDates.get(calc.dueDate.getTime()) ?? 0) + 1);
+    }
+  }
+  const graceRows: LedgerRow[] = [...graceDates.keys()].map((ts) => ({
+    kind: "graceday",
+    id: `grace-${ts}`,
+    detail: "due date · walay multa",
+    date: new Date(ts).toISOString(),
+    balance: 0,
+  }));
+  const allRows = [...rows, ...lateRows, ...graceRows];
 
   // Sort by date; on ties: palod first, then activity (than/bayad/note),
   // then latefee — keeps the release row visible above its accruals.
@@ -293,7 +312,8 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
     than: 1,
     bayad: 2,
     note: 3,
-    latefee: 4,
+    graceday: 4,
+    latefee: 5,
   };
   allRows.sort((a, b) => {
     const d = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -333,7 +353,7 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={`${r.kind}-${r.id}`} className="border-t border-card-border/50">
+                <tr key={`${r.kind}-${r.id}`} className={`border-t border-card-border/50 ${r.kind === "graceday" ? "opacity-50 italic" : ""}`}>
                   <td className="px-2 sm:px-3 py-1.5 text-muted">
                     {new Date(r.date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
                   </td>
@@ -384,6 +404,14 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                       <td className="px-2 sm:px-3 py-1.5" />
                     </>
                   )}
+                  {r.kind === "graceday" && (
+                    <>
+                      <td className="px-2 sm:px-3 py-1.5 text-muted">{r.detail}</td>
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5" />
+                    </>
+                  )}
                   {r.kind === "bayad" && (
                     <>
                       <td className="px-2 sm:px-3 py-1.5 text-muted">{r.detail}</td>
@@ -428,7 +456,7 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                           </button>
                         </div>
                       ) : null;
-                    })() : r.kind === "latefee" ? null : (() => {
+                    })() : (r.kind === "latefee" || r.kind === "graceday") ? null : (() => {
                       const entry = activity.find((a) => a.id === r.id);
                       return entry ? (
                         <button
