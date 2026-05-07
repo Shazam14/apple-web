@@ -261,10 +261,10 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
       rows.push({ kind: "note", id: a.id, detail: a.detail ?? "Missed collection", date: a.created_at, balance: 0 });
     }
   }
-  // Generate one synthetic late-fee row per late period, dated at the START
-  // of the period it covers (dueDate + (i-1) * periodDays). Reads naturally
-  // for daily loans: release May 5 (tenor 1) → due May 6 → first late-fee
-  // row dated May 6, second on May 7, etc.
+  // Generate one synthetic late-fee row per late period, dated on the day
+  // the fee accrues (dueDate + i * periodDays). With dueDate now meaning
+  // "the day THAN at release covers" (tenor=1 → dueDate = release), period
+  // 1 lands on release+1 — the first day actually late.
   const lateRows: LedgerRow[] = [];
   for (const t of tranches) {
     const calc = lateFeeFor(t, borrower);
@@ -273,7 +273,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
       const trancheIndex = tranches.indexOf(t) + 1;
       for (let i = 1; i <= calc.periodsLate; i++) {
         const feeDate = new Date(calc.dueDate);
-        feeDate.setDate(feeDate.getDate() + (i - 1) * period);
+        feeDate.setDate(feeDate.getDate() + i * period);
         lateRows.push({
           kind: "latefee",
           id: `late-${t.id}-${i}`,

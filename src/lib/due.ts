@@ -15,7 +15,9 @@ export function dueStateFor(releasedAt: string, tenorDays: number | null): DueSt
   if (!tenorDays || tenorDays <= 0) return NONE;
   const released = new Date(releasedAt);
   const due = new Date(released);
-  due.setDate(due.getDate() + tenorDays);
+  // tenor counts the release day itself (THAN at release covers day 0).
+  // tenor=1 → due same day as release; late starts the next day.
+  due.setDate(due.getDate() + tenorDays - 1);
   due.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -91,7 +93,9 @@ export function computeCalc(input: CalcInputs, asOf: Date = new Date()): CalcRes
   let dueDate: Date | null = null;
   if (tenorDays && tenorDays > 0) {
     dueDate = new Date(releasedAt);
-    dueDate.setDate(dueDate.getDate() + tenorDays);
+    // tenor counts the release day itself: tenor=1 → due same day as release.
+    // Late accrues from the day after dueDate.
+    dueDate.setDate(dueDate.getDate() + tenorDays - 1);
     dueDate.setHours(0, 0, 0, 0);
   }
 
