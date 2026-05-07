@@ -261,40 +261,56 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
       rows.push({ kind: "note", id: a.id, detail: a.detail ?? "Missed collection", date: a.created_at, balance: 0 });
     }
   }
-  rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  // Insert a synthetic late-fee row right after each palod row that has accrued
-  // a late fee. Late fees only compute when a tranche has a tenor_days set.
-  const withLate: LedgerRow[] = [];
-  for (const r of rows) {
-    withLate.push(r);
-    if (r.kind === "palod") {
-      const tranche = tranches.find((t) => t.id === r.id);
-      if (tranche) {
-        const calc = lateFeeFor(tranche, borrower);
-        if (calc.totalLateFee > 0) {
-          withLate.push({
-            kind: "latefee",
-            id: `late-${tranche.id}`,
-            amount: calc.totalLateFee.toFixed(2),
-            detail: `palod #${r.trancheIndex} late fee (${calc.periodsLate}× ${formatPHP(calc.dailyInterest, 2)})`,
-            date: r.date,
-            balance: 0,
-          });
-        }
+  // Generate one synthetic late-fee row per late period, dated when that
+  // period actually closed (dueDate + i * periodDays). One row per palod
+  // becomes one row per day-late (or week-late, etc.), so the date column
+  // tells the story.
+  const lateRows: LedgerRow[] = [];
+  for (const t of tranches) {
+    const calc = lateFeeFor(t, borrower);
+    if (calc.periodsLate > 0 && calc.dueDate) {
+      const period = t.late_fee_period_days ?? 1;
+      const trancheIndex = tranches.indexOf(t) + 1;
+      for (let i = 1; i <= calc.periodsLate; i++) {
+        const feeDate = new Date(calc.dueDate);
+        feeDate.setDate(feeDate.getDate() + i * period);
+        lateRows.push({
+          kind: "latefee",
+          id: `late-${t.id}-${i}`,
+          amount: calc.dailyInterest.toFixed(2),
+          detail: `palod #${trancheIndex} late fee`,
+          date: feeDate.toISOString(),
+          balance: 0,
+        });
       }
     }
   }
+  const allRows = [...rows, ...lateRows];
+
+  // Sort by date; on ties: palod first, then activity (than/bayad/note),
+  // then latefee — keeps the release row visible above its accruals.
+  const tieOrder: Record<LedgerRow["kind"], number> = {
+    palod: 0,
+    than: 1,
+    bayad: 2,
+    note: 3,
+    latefee: 4,
+  };
+  allRows.sort((a, b) => {
+    const d = new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (d !== 0) return d;
+    return tieOrder[a.kind] - tieOrder[b.kind];
+  });
 
   let running = 0;
-  for (const r of withLate) {
+  for (const r of allRows) {
     if (r.kind === "palod") running += Number(r.amount) + Number(r.than);
     else if (r.kind === "latefee") running += Number(r.amount);
     else if (r.kind === "than") running += Number(r.amount);
     else if (r.kind === "bayad") running -= Number(r.amount);
     r.balance = running;
   }
-  return withLate;
+  return allRows;
 }
 
 function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; borrower: Borrower; onChanged: () => void }) {
