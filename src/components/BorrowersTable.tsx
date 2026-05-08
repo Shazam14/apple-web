@@ -8,6 +8,7 @@ import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
 import { LatepayModal } from "./LatepayModal";
 import { BayadModal } from "./BayadModal";
+import { CloseLoanModal } from "./CloseLoanModal";
 import { EditActivityModal } from "./EditActivityModal";
 import { EditTrancheModal } from "./EditTrancheModal";
 
@@ -236,6 +237,7 @@ type LedgerRow =
   | { kind: "graceday"; id: string; detail: string; date: string; balance: number }
   | { kind: "than"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "bayad"; id: number; amount: string; detail: string; date: string; balance: number }
+  | { kind: "closed"; id: number; amount: string; detail: string; date: string; balance: number }
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
 
 function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: Borrower): LedgerRow[] {
@@ -260,6 +262,8 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
       rows.push({ kind: "bayad", id: a.id, amount: a.amount, detail: a.detail ?? "", date: a.created_at, balance: 0 });
     } else if (a.activity_type === "Missed collection") {
       rows.push({ kind: "note", id: a.id, detail: a.detail ?? "Missed collection", date: a.created_at, balance: 0 });
+    } else if (a.activity_type === "Loan closed" && a.amount) {
+      rows.push({ kind: "closed", id: a.id, amount: a.amount, detail: a.detail ?? "closed", date: a.created_at, balance: 0 });
     }
   }
   // Generate one synthetic late-fee row per late period, dated when the
@@ -314,6 +318,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
     note: 3,
     graceday: 4,
     latefee: 5,
+    closed: 6,
   };
   allRows.sort((a, b) => {
     const d = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -327,6 +332,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
     else if (r.kind === "latefee") running += Number(r.amount);
     else if (r.kind === "than") running += Number(r.amount);
     else if (r.kind === "bayad") running -= Number(r.amount);
+    else if (r.kind === "closed") running -= Number(r.amount);
     r.balance = running;
   }
   return allRows;
@@ -418,6 +424,17 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                       <td className="px-2 sm:px-3 py-1.5" />
                       <td className="px-2 sm:px-3 py-1.5" />
                       <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-green-soft">{formatPHP(r.amount)}</td>
+                    </>
+                  )}
+                  {r.kind === "closed" && (
+                    <>
+                      <td className="px-2 sm:px-3 py-1.5 text-blue-soft/90">
+                        <span className="text-[10px] uppercase tracking-wider border border-blue-soft/40 rounded px-1 mr-1.5">closed</span>
+                        {r.detail}
+                      </td>
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5" />
+                      <td className="px-2 sm:px-3 py-1.5 text-right tabular-nums text-blue-soft">{formatPHP(r.amount)}</td>
                     </>
                   )}
                   {r.kind === "note" && (
@@ -557,8 +574,10 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [addingLatepay, setAddingLatepay] = useState(false);
   const [addingAccrual, setAddingAccrual] = useState(false);
   const [addingBayad, setAddingBayad] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
+  const canClose = Number(b.balance) > 0;
 
   const dirtyName = name !== b.name;
   const dirtyNakulha = nakulha !== b.than_nakulha;
@@ -685,6 +704,16 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
             >
               + bayad
             </button>
+            {canClose && (
+              <button
+                onClick={() => setClosing(true)}
+                disabled={pending}
+                title="Close / waive remaining balance"
+                className="text-xs text-blue-soft hover:text-white border border-blue-soft/30 hover:border-blue-soft/60 rounded px-1.5 py-0.5 disabled:opacity-60"
+              >
+                close
+              </button>
+            )}
             <button
               onClick={remove}
               disabled={pending}
@@ -733,6 +762,16 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
           onClose={() => setAddingBayad(false)}
           onAdded={() => {
             setAddingBayad(false);
+            onChange();
+          }}
+        />
+      )}
+      {closing && (
+        <CloseLoanModal
+          borrower={b}
+          onClose={() => setClosing(false)}
+          onAdded={() => {
+            setClosing(false);
             onChange();
           }}
         />
@@ -789,7 +828,9 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [addingLatepay, setAddingLatepay] = useState(false);
   const [addingAccrual, setAddingAccrual] = useState(false);
   const [addingBayad, setAddingBayad] = useState(false);
+  const [closing, setClosing] = useState(false);
   const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
+  const canClose = Number(b.balance) > 0;
 
   async function commit(patch: Parameters<typeof api.patchBorrower>[1]) {
     setPending(true);
@@ -918,6 +959,15 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
         >
           + bayad
         </button>
+        {canClose && (
+          <button
+            onClick={() => setClosing(true)}
+            disabled={pending}
+            className="text-xs text-blue-soft hover:text-white border border-blue-soft/30 hover:border-blue-soft/60 rounded px-2 py-1 disabled:opacity-60"
+          >
+            close
+          </button>
+        )}
         <button
           onClick={remove}
           disabled={pending}
@@ -964,6 +1014,16 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
           onClose={() => setAddingBayad(false)}
           onAdded={() => {
             setAddingBayad(false);
+            onChange();
+          }}
+        />
+      )}
+      {closing && (
+        <CloseLoanModal
+          borrower={b}
+          onClose={() => setClosing(false)}
+          onAdded={() => {
+            setClosing(false);
             onChange();
           }}
         />
