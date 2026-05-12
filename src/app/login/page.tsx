@@ -48,7 +48,7 @@ export default function LoginPage() {
         className="w-full max-w-sm rounded-2xl border border-panel-border bg-panel p-8 space-y-5"
       >
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Apple Lending</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">CoolEd</h1>
           <p className="text-sm text-muted mt-1">Owner sign-in</p>
         </div>
         <div className="space-y-3">

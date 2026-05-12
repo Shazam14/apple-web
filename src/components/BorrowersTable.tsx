@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Borrower, Tranche, ActivityEntry, BorrowerStatus, api, formatPHP } from "@/lib/api";
-import { trancheDueState, summariseBorrowerDue, DueState, totalLateFeesFor, lateFeeFor } from "@/lib/due";
+import { trancheDueState, summariseBorrowerDue, DueState, totalLateFeesFor, lateFeeFor, computeTrancheSettledAt } from "@/lib/due";
 import { Panel } from "./Card";
 import { AddBorrowerModal } from "./AddBorrowerModal";
 import { AddTrancheModal } from "./AddTrancheModal";
@@ -218,8 +218,8 @@ function DueChips({ b }: { b: Borrower }) {
   );
 }
 
-function TrancheLateBadge({ t, b }: { t: Tranche; b: Borrower }) {
-  const calc = lateFeeFor(t, b);
+function TrancheLateBadge({ t, b, settledAt }: { t: Tranche; b: Borrower; settledAt: Date | null }) {
+  const calc = lateFeeFor(t, b, undefined, settledAt);
   if (calc.totalLateFee <= 0) return null;
   return (
     <span
@@ -241,11 +241,12 @@ type LedgerRow =
   | { kind: "note"; id: number; detail: string; date: string; balance: number };
 
 function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: Borrower): LedgerRow[] {
+  const settledMap = computeTrancheSettledAt(borrower);
   const rows: LedgerRow[] = tranches.map((t, i) => ({
     kind: "palod",
     id: t.id,
     amount: t.principal,
-    than: lateFeeFor(t, borrower).baseInterest.toFixed(2),
+    than: lateFeeFor(t, borrower, undefined, settledMap.get(t.id) ?? null).baseInterest.toFixed(2),
     date: t.released_at,
     trancheIndex: i + 1,
     label: t.label ?? null,
@@ -271,7 +272,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
   // May 5 with tenor=1: dueDate = May 6 (grace), first late fee = May 7.
   const lateRows: LedgerRow[] = [];
   for (const t of tranches) {
-    const calc = lateFeeFor(t, borrower);
+    const calc = lateFeeFor(t, borrower, undefined, settledMap.get(t.id) ?? null);
     if (calc.periodsLate > 0 && calc.dueDate) {
       const period = t.late_fee_period_days ?? 1;
       const trancheIndex = tranches.indexOf(t) + 1;
@@ -295,7 +296,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
   todayStart.setHours(0, 0, 0, 0);
   const graceDates = new Map<number, number>();
   for (const t of tranches) {
-    const calc = lateFeeFor(t, borrower);
+    const calc = lateFeeFor(t, borrower, undefined, settledMap.get(t.id) ?? null);
     if (calc.dueDate && calc.dueDate.getTime() <= todayStart.getTime()) {
       graceDates.set(calc.dueDate.getTime(), (graceDates.get(calc.dueDate.getTime()) ?? 0) + 1);
     }
@@ -340,6 +341,7 @@ function buildLedger(tranches: Tranche[], activity: ActivityEntry[], borrower: B
 
 function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: Tranche[]; activity: ActivityEntry[]; borrower: Borrower; onChanged: () => void }) {
   const rows = buildLedger(tranches, activity, borrower);
+  const settledMap = computeTrancheSettledAt(borrower);
   const [editing, setEditing] = useState<ActivityEntry | null>(null);
   const [editingTranche, setEditingTranche] = useState<{ tranche: Tranche; index: number } | null>(null);
   return (
@@ -381,7 +383,7 @@ function LedgerContent({ tranches, activity, borrower, onChanged }: { tranches: 
                                     tenorDays={r.tenor_days}
                                   />
                                 )}
-                                {tranche && <TrancheLateBadge t={tranche} b={borrower} />}
+                                {tranche && <TrancheLateBadge t={tranche} b={borrower} settledAt={settledMap.get(tranche.id) ?? null} />}
                               </>
                             );
                           })()}
