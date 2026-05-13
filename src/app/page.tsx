@@ -9,6 +9,7 @@ import { EarningsOverview } from "@/components/EarningsOverview";
 import { RateSettings } from "@/components/RateSettings";
 import { BorrowersTable } from "@/components/BorrowersTable";
 import { PesoInventory } from "@/components/PesoInventory";
+import { ArchivedBorrowers } from "@/components/ArchivedBorrowers";
 
 const STEPS = [
   {
@@ -165,6 +166,7 @@ export default function DashboardPage() {
       <EarningsOverview s={summary} borrowers={borrowers} />
       <RateSettings s={summary} onSaved={() => load()} />
       <BorrowersTable borrowers={borrowers} onChange={load} />
+      <ArchivedBorrowers onChange={load} />
     </main>
   );
 }

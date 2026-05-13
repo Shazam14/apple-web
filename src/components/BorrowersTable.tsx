@@ -577,6 +577,7 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [addingAccrual, setAddingAccrual] = useState(false);
   const [addingBayad, setAddingBayad] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
   const canClose = Number(b.balance) > 0;
@@ -594,13 +595,16 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
     }
   }
 
-  async function remove() {
-    if (!confirm(`Remove ${b.name}? This deletes all activity history.`)) return;
+  async function archive() {
+    if (!confirm(`Archive ${b.name}?\n\nMakatipig sa archive — pwede pa balikon. History ma-preserve.`)) return;
+    setArchiving(true);
     setPending(true);
     try {
-      await api.deleteBorrower(b.id);
+      await new Promise((r) => setTimeout(r, 280));
+      await api.archiveBorrower(b.id);
       onChange();
-    } finally {
+    } catch {
+      setArchiving(false);
       setPending(false);
     }
   }
@@ -610,7 +614,11 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
 
   return (
     <>
-      <tr className="border-t border-panel-border">
+      <tr
+        className={`border-t border-panel-border transition-all duration-300 ${
+          archiving ? "opacity-0 -translate-x-6" : "opacity-100"
+        }`}
+      >
         <td className="px-2 py-2">
           <div className="flex items-center gap-1">
             <button
@@ -717,11 +725,12 @@ function BorrowerRow({ b, onChange }: { b: Borrower; onChange: () => void }) {
               </button>
             )}
             <button
-              onClick={remove}
+              onClick={archive}
               disabled={pending}
-              className="text-xs text-muted hover:text-amber-soft disabled:opacity-60"
+              title="Move to archive — keeps history, can be restored"
+              className="text-xs text-muted hover:text-blue-soft disabled:opacity-60"
             >
-              remove
+              🗂 archive
             </button>
           </div>
         </td>
@@ -831,6 +840,7 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
   const [addingAccrual, setAddingAccrual] = useState(false);
   const [addingBayad, setAddingBayad] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const dailyInterest = (Number(b.principal) * Number(b.rate_snapshot) / 100).toFixed(2);
   const canClose = Number(b.balance) > 0;
 
@@ -844,13 +854,16 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
     }
   }
 
-  async function remove() {
-    if (!confirm(`Remove ${b.name}? This deletes all activity history.`)) return;
+  async function archive() {
+    if (!confirm(`Archive ${b.name}?\n\nMakatipig sa archive — pwede pa balikon. History ma-preserve.`)) return;
+    setArchiving(true);
     setPending(true);
     try {
-      await api.deleteBorrower(b.id);
+      await new Promise((r) => setTimeout(r, 280));
+      await api.archiveBorrower(b.id);
       onChange();
-    } finally {
+    } catch {
+      setArchiving(false);
       setPending(false);
     }
   }
@@ -859,7 +872,11 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
     "rounded-lg border border-card-border bg-bg px-2.5 py-1.5 outline-none focus:border-amber-soft";
 
   return (
-    <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
+    <div
+      className={`rounded-xl border border-card-border bg-card p-4 space-y-3 transition-all duration-300 ${
+        archiving ? "opacity-0 scale-95 -translate-x-6" : "opacity-100 scale-100"
+      }`}
+    >
       <div className="flex items-center gap-2">
         <input
           value={name}
@@ -971,11 +988,12 @@ function BorrowerCard({ b, onChange }: { b: Borrower; onChange: () => void }) {
           </button>
         )}
         <button
-          onClick={remove}
+          onClick={archive}
           disabled={pending}
-          className="ml-auto text-xs text-muted hover:text-amber-soft disabled:opacity-60"
+          title="Move to archive — keeps history, can be restored"
+          className="ml-auto text-xs text-muted hover:text-blue-soft disabled:opacity-60"
         >
-          remove
+          🗂 archive
         </button>
       </div>
 

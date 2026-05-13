@@ -89,6 +89,7 @@ export type Borrower = {
   activity: ActivityEntry[];
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 export type InventoryCategory = "expense" | "than_extra";
@@ -124,6 +125,11 @@ export const api = {
   updateSettings: (body: { total_capital: string; cash_on_hand: string; daily_rate: string }) =>
     request<SettingsSummary>("PUT", "/settings", body),
   listBorrowers: () => request<Borrower[]>("GET", "/borrowers"),
+  listArchivedBorrowers: () => request<Borrower[]>("GET", "/borrowers?archived=true"),
+  archiveBorrower: (id: number) =>
+    request<Borrower>("POST", `/borrowers/${id}/archive`),
+  unarchiveBorrower: (id: number) =>
+    request<Borrower>("POST", `/borrowers/${id}/unarchive`),
   inventorySummary: () => request<InventorySummary>("GET", "/inventory/summary"),
   addInventoryEntry: (body: { category: InventoryCategory; description: string; amount: string }) =>
     request<InventoryEntry_>("POST", "/inventory/entries", body),
