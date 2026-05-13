@@ -8,6 +8,7 @@ import { CapitalOverview } from "@/components/CapitalOverview";
 import { EarningsOverview } from "@/components/EarningsOverview";
 import { RateSettings } from "@/components/RateSettings";
 import { BorrowersTable } from "@/components/BorrowersTable";
+import { PesoInventory } from "@/components/PesoInventory";
 
 const STEPS = [
   {
@@ -160,6 +161,7 @@ export default function DashboardPage() {
 
       <GettingStarted />
       <CapitalOverview s={summary} />
+      <PesoInventory onSummaryChange={load} />
       <EarningsOverview s={summary} borrowers={borrowers} />
       <RateSettings s={summary} onSaved={() => load()} />
       <BorrowersTable borrowers={borrowers} onChange={load} />

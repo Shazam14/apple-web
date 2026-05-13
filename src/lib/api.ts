@@ -91,11 +91,44 @@ export type Borrower = {
   updated_at: string;
 };
 
+export type InventoryCategory = "expense" | "than_extra";
+
+export type InventoryEntry_ = {
+  id: number;
+  category: InventoryCategory;
+  description: string;
+  amount: string;
+  created_at: string;
+};
+
+export type CapitalOutItem = {
+  borrower_id: number;
+  name: string;
+  amount: string;
+};
+
+export type InventorySummary = {
+  capital: string;
+  capital_out_total: string;
+  capital_out_items: CapitalOutItem[];
+  than_borrower_total: string;
+  than_extra_total: string;
+  than_total: string;
+  expenses_total: string;
+  remaining: string;
+  entries: InventoryEntry_[];
+};
+
 export const api = {
   summary: () => request<SettingsSummary>("GET", "/settings/summary"),
   updateSettings: (body: { total_capital: string; cash_on_hand: string; daily_rate: string }) =>
     request<SettingsSummary>("PUT", "/settings", body),
   listBorrowers: () => request<Borrower[]>("GET", "/borrowers"),
+  inventorySummary: () => request<InventorySummary>("GET", "/inventory/summary"),
+  addInventoryEntry: (body: { category: InventoryCategory; description: string; amount: string }) =>
+    request<InventoryEntry_>("POST", "/inventory/entries", body),
+  deleteInventoryEntry: (id: number) =>
+    request<void>("DELETE", `/inventory/entries/${id}`),
   createBorrower: (body: TrancheBody & { name: string }) =>
     request<Borrower>("POST", "/borrowers", body),
   addTranche: (borrowerId: number, body: TrancheBody) =>
