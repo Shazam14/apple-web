@@ -1,103 +1,195 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { api, Borrower, SettingsSummary } from "@/lib/api";
-import { CapitalOverview } from "@/components/CapitalOverview";
-import { EarningsOverview } from "@/components/EarningsOverview";
-import { RateSettings } from "@/components/RateSettings";
-import { BorrowersTable } from "@/components/BorrowersTable";
-import { PesoInventory } from "@/components/PesoInventory";
-import { ArchivedBorrowers } from "@/components/ArchivedBorrowers";
+import Link from "next/link";
+import { api, Borrower, SettingsSummary, formatPHP } from "@/lib/api";
 
-const STEPS = [
-  {
-    icon: "⚙️",
-    title: "I-set ang imong kapital",
-    body: "Sulod sa daily rate, total capital, ug cash on hand sa THAN Rate & Capital Settings. Kini mao ang pundasyon sa tanan.",
-  },
-  {
-    icon: "➕",
-    title: "Dugangi ug borrower",
-    body: 'I-klik ang "+ Add borrower". Ibutang ang ngalan ug unang palod (loan amount). Makita dayon siya sa lista.',
-  },
-  {
-    icon: "💸",
-    title: "Bag-ong palod (additional release)",
-    body: 'Kung mag-release ug pautang sa existing borrower, i-klik ang "+ release" sa iyang row. Mag-dugang ug bag-ong tranche.',
-  },
-  {
-    icon: "📅",
-    title: "I-post ang interest sa matag adlaw",
-    body: 'I-klik ang "+ interest" — auto-fill na ang amount base sa daily rate × principal. Confirm lang ug Post. Wala nay kalkulohon pa!',
-  },
-  {
-    icon: "⚠️",
-    title: "Latepay / penalty",
-    body: 'Kung naa\'y overdue charge o penalty, i-klik ang "+ latepay" ug manual nga sulod ang amount ug note.',
-  },
-  {
-    icon: "✅",
-    title: "I-record ang bayad",
-    body: "I-klik ang \"+ bayad\" sa borrower row. Sulod ang amount ug note (e.g. \"toa ub sim\" o \"cash\"). Ma-deduct dayon sa balance ug makita sa ledger.",
-  },
-  {
-    icon: "💡",
-    title: "Tan-awa ang imong kwarta (Cash & Earnings)",
-    body: "Human mag-bayad ang borrower, adto sa Cash & Earnings panel. Wala: makita ang THAN nakuha nimo matag borrower. Tuo: formula — capital minus lent plus collected = cash available. Sa ubos: 💸 Spend = THAN profit nimo gamiton, 🔄 Re-lend = idle capital pwede pa i-pautang o i-deposit.",
-  },
+const AVATAR_PALETTE = [
+  "#2a6fdb",
+  "#1f8a5b",
+  "#c47a1a",
+  "#9333ea",
+  "#0891b2",
+  "#dc2626",
+  "#1f3a5c",
+  "#65a30d",
 ];
 
-function GettingStarted() {
-  const [open, setOpen] = useState(false);
+function avatarFor(b: Borrower): { color: string; initials: string } {
+  let hash = 0;
+  for (let i = 0; i < b.name.length; i++) hash = (hash * 31 + b.name.charCodeAt(i)) >>> 0;
+  const color = AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+  const parts = b.name.trim().split(/\s+/);
+  const initials = ((parts[0]?.[0] ?? "?") + (parts[1]?.[0] ?? "")).toUpperCase();
+  return { color, initials };
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function todayHeader(): { weekday: string; greeting: string } {
+  const now = new Date();
+  const weekday = now.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const h = now.getHours();
+  const greeting = h < 11 ? "Good morning" : h < 18 ? "Today" : "Good evening";
+  return { weekday, greeting };
+}
+
+function Avatar({ b, size = 40 }: { b: Borrower; size?: number }) {
+  const { color, initials } = avatarFor(b);
   return (
-    <div className="rounded-2xl border border-card-border bg-card overflow-hidden">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-card-border/30 transition-colors"
+    <div
+      className="avatar"
+      style={{
+        background: color,
+        width: size,
+        height: size,
+        fontSize: Math.round(size * 0.36),
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="card" style={{ padding: 14 }}>
+      <div className="small" style={{ marginBottom: 4 }}>{label}</div>
+      <div className="money-lg" style={{ marginBottom: 2 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function QuickTile({
+  emoji,
+  label,
+  tone,
+  href,
+}: {
+  emoji: string;
+  label: string;
+  tone: "success" | "accent" | "warning";
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="card"
+      style={{
+        padding: "14px 10px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+        textDecoration: "none",
+        color: "var(--text)",
+      }}
+    >
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          background: `var(--${tone}-soft)`,
+          color: `var(--${tone})`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-base">🇵🇭</span>
-          <span className="text-sm font-semibold tracking-wide uppercase text-muted">
-            Pagsugod — Getting Started <span className="normal-case font-normal text-muted/60">(sa Bisaya)</span>
+        {emoji}
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 600 }}>{label}</div>
+    </Link>
+  );
+}
+
+function CollectRow({ b, last }: { b: Borrower; last: boolean }) {
+  const balance = Number(b.balance);
+  const thanActual = Number(b.than_actual);
+  const isOverdue = b.status === "overdue";
+  return (
+    <Link
+      href={`/borrowers/${b.id}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px",
+        borderBottom: last ? 0 : "1px solid var(--border)",
+        textDecoration: "none",
+        color: "var(--text)",
+      }}
+    >
+      <Avatar b={b} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {b.name}
           </span>
         </div>
-        <span className="text-muted text-xs">{open ? "▲ itago" : "▼ ipakita"}</span>
-      </button>
-      {open && (
-        <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-card-border">
-          {STEPS.map((s, i) => (
-            <div key={i} className="mt-4 rounded-xl border border-card-border bg-bg/40 px-4 py-3 space-y-1">
-              <div className="text-xl">{s.icon}</div>
-              <div className="text-sm font-semibold">{s.title}</div>
-              <div className="text-xs text-muted leading-relaxed">{s.body}</div>
-            </div>
-          ))}
-          <div className="sm:col-span-2 lg:col-span-3 mt-1 text-[11px] text-muted/50 text-center">
-            Gihimo kini para nimo, boss. Maayong negosyo! 💪
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span className={`pill pill-${isOverdue ? "danger" : "warning"}`}>
+            {isOverdue ? "overdue" : "active"}
+          </span>
+          {thanActual > 0 && (
+            <span className="money-sm" style={{ color: "var(--text-3)" }}>
+              {formatPHP(thanActual)} accrued
+            </span>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: 4,
+        }}
+      >
+        <span className="money" style={{ fontSize: 13, fontWeight: 600 }}>
+          {formatPHP(balance)}
+        </span>
+        <span
+          className="btn btn-primary btn-xs"
+          style={{ padding: "0 12px", height: 26, pointerEvents: "none" }}
+        >
+          + Bayad
+        </span>
+      </div>
+    </Link>
   );
 }
 
 export default function TodayPage() {
   const [summary, setSummary] = useState<SettingsSummary | null>(null);
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
-  const [archived, setArchived] = useState<Borrower[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [s, bs, ars] = await Promise.all([
-        api.summary(),
-        api.listBorrowers(),
-        api.listArchivedBorrowers(),
-      ]);
+      const [s, bs] = await Promise.all([api.summary(), api.listBorrowers()]);
       setSummary(s);
       setBorrowers(bs);
-      setArchived(ars);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
@@ -112,54 +204,178 @@ export default function TodayPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-muted">
-        Loading…
-      </main>
+      <div
+        className="kfx"
+        style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <span className="small">Loading…</span>
+      </div>
     );
   }
 
   if (error || !summary) {
     return (
-      <main className="min-h-screen p-6 max-w-3xl mx-auto">
-        <div className="rounded-xl border border-amber/40 bg-amber/10 text-amber-soft p-4">
+      <div className="kfx" style={{ minHeight: "100dvh", padding: 20 }}>
+        <div
+          className="card"
+          style={{
+            padding: 16,
+            borderColor: "var(--danger)",
+            background: "var(--danger-soft)",
+            color: "var(--danger)",
+          }}
+        >
           {error ?? "No data"}
         </div>
-      </main>
+      </div>
     );
   }
 
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const { weekday, greeting } = todayHeader();
+  const expectedToday = Number(summary.than_day);
+  const iso = todayISO();
+  const collectedToday = borrowers.reduce((sum, b) => {
+    return (
+      sum +
+      b.activity
+        .filter((a) => a.activity_type === "bayad" && a.created_at.startsWith(iso))
+        .reduce((s, a) => s + Number(a.amount || 0), 0)
+    );
+  }, 0);
+  const progressPct =
+    expectedToday > 0 ? Math.min(100, (collectedToday / expectedToday) * 100) : 0;
+
+  const collectionList = borrowers
+    .filter((b) => b.status === "active" || b.status === "overdue")
+    .sort((a, b) => {
+      if (a.status === "overdue" && b.status !== "overdue") return -1;
+      if (b.status === "overdue" && a.status !== "overdue") return 1;
+      return Number(b.than_actual) - Number(a.than_actual);
+    });
 
   return (
-    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-6 max-w-[1180px] mx-auto space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-            Lending dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-muted mt-1">
-            Owner-controlled · All fields editable
-          </p>
+    <div className="kfx" style={{ minHeight: "100dvh", background: "var(--bg)" }}>
+      <div
+        style={{
+          maxWidth: 1100,
+          margin: "0 auto",
+          padding: "8px 20px 32px",
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: "8px 0 16px" }}>
+          <div className="small" style={{ marginBottom: 2 }}>{weekday}</div>
+          <div className="h1">{greeting}</div>
         </div>
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
-          <span className="rounded-full border border-card-border bg-card px-3 py-1 text-muted-soft whitespace-nowrap">
-            {today}
+
+        {/* Hero */}
+        <div style={{ marginBottom: 16 }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>To collect today</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
+              <span className="money-hero accent">{formatPHP(expectedToday)}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+              <span className="pill pill-warning">
+                <span style={{ fontWeight: 700 }}>{summary.active_count}</span>&nbsp;active
+              </span>
+              <span className="pill pill-danger">
+                <span style={{ fontWeight: 700 }}>{summary.overdue_count}</span>&nbsp;overdue
+              </span>
+              <span className="pill pill-muted">
+                <span style={{ fontWeight: 700 }}>{summary.total_borrowers}</span>&nbsp;total
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+              }}
+            >
+              <span className="small">Collected today</span>
+              <span className="money-sm pos">{formatPHP(collectedToday)}</span>
+            </div>
+            <div className="bar">
+              <span style={{ width: `${progressPct}%`, background: "var(--success)" }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 8,
+            marginBottom: 24,
+          }}
+        >
+          <QuickTile emoji="↙" label="Bayad" tone="success" href="/borrowers" />
+          <QuickTile emoji="↗" label="Palod" tone="accent" href="/borrowers" />
+          <QuickTile emoji="!" label="Multa" tone="warning" href="/borrowers" />
+        </div>
+
+        {/* Collection round */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 8,
+          }}
+        >
+          <div className="eyebrow">Collection round</div>
+          <span className="small">
+            {collectionList.length} {collectionList.length === 1 ? "borrower" : "borrowers"}
           </span>
         </div>
-      </header>
+        <div style={{ marginBottom: 24 }}>
+          <div className="card" style={{ overflow: "hidden" }}>
+            {collectionList.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center" }} className="small">
+                No active borrowers
+              </div>
+            ) : (
+              collectionList.map((b, i) => (
+                <CollectRow key={b.id} b={b} last={i === collectionList.length - 1} />
+              ))
+            )}
+          </div>
+        </div>
 
-      <GettingStarted />
-      <CapitalOverview s={summary} />
-      <PesoInventory onSummaryChange={load} />
-      <EarningsOverview s={summary} borrowers={borrowers} />
-      <RateSettings s={summary} onSaved={() => load()} />
-      <BorrowersTable borrowers={borrowers} onChange={load} />
-      <ArchivedBorrowers items={archived} onChange={load} />
-    </main>
+        {/* Snapshot */}
+        <div className="eyebrow" style={{ marginBottom: 8 }}>Snapshot</div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
+          }}
+        >
+          <MiniStat
+            label="Cash on hand"
+            value={formatPHP(summary.cash_on_hand)}
+            sub="idle"
+          />
+          <MiniStat
+            label="Than today"
+            value={formatPHP(summary.than_day)}
+            sub={`${summary.active_count} active`}
+          />
+          <MiniStat
+            label="Collected"
+            value={formatPHP(summary.sum_than_nakulha)}
+            sub="this cycle"
+          />
+          <MiniStat
+            label="Deployed"
+            value={formatPHP(summary.lent_out)}
+            sub={`${summary.total_borrowers} borrowers`}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
