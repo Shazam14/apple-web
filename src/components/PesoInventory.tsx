@@ -92,11 +92,16 @@ export function PesoInventory({ onSummaryChange }: { onSummaryChange?: () => voi
             data.capital_out_items.map((it) => (
               <div
                 key={it.borrower_id}
-                className="px-4 py-1.5 flex justify-between text-sm border-t border-card-border/40"
+                className="px-4 py-1.5 flex justify-between items-center gap-3 text-sm border-t border-card-border/40"
               >
-                <span className="text-muted">▸ {it.name}</span>
-                <span className="tabular-nums text-amber-soft/90">
-                  {formatPHP(it.amount)}
+                <span className="text-muted truncate">▸ {it.name}</span>
+                <span className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-blue-soft/80 tabular-nums">
+                    THAN {formatPHP(it.than)}
+                  </span>
+                  <span className="tabular-nums text-amber-soft/90 min-w-[5.5rem] text-right">
+                    {formatPHP(it.amount)}
+                  </span>
                 </span>
               </div>
             ))

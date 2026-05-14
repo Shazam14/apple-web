@@ -106,6 +106,7 @@ export type CapitalOutItem = {
   borrower_id: number;
   name: string;
   amount: string;
+  than: string;
 };
 
 export type InventorySummary = {
