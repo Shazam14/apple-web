@@ -3,6 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api, Borrower, SettingsSummary, formatPHP } from "@/lib/api";
+import { BayadSheet } from "@/components/shell/BayadSheet";
+
+const BAYAD_ACTIVITY_TYPES = new Set([
+  "Payment received",
+  "Partial payment",
+  "PAYMENT_RECEIVED",
+]);
 
 const AVATAR_PALETTE = [
   "#2a6fdb",
@@ -114,49 +121,68 @@ function QuickTile({
   );
 }
 
-function CollectRow({ b, last }: { b: Borrower; last: boolean }) {
+function CollectRow({
+  b,
+  last,
+  onBayad,
+}: {
+  b: Borrower;
+  last: boolean;
+  onBayad: (b: Borrower) => void;
+}) {
   const balance = Number(b.balance);
   const thanActual = Number(b.than_actual);
   const isOverdue = b.status === "overdue";
   return (
-    <Link
-      href={`/borrowers/${b.id}`}
+    <div
       style={{
         display: "flex",
         alignItems: "center",
         gap: 12,
         padding: "12px 14px",
         borderBottom: last ? 0 : "1px solid var(--border)",
-        textDecoration: "none",
         color: "var(--text)",
       }}
     >
-      <Avatar b={b} size={40} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-          <span
-            style={{
-              fontWeight: 600,
-              fontSize: 14,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {b.name}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span className={`pill pill-${isOverdue ? "danger" : "warning"}`}>
-            {isOverdue ? "overdue" : "active"}
-          </span>
-          {thanActual > 0 && (
-            <span className="money-sm" style={{ color: "var(--text-3)" }}>
-              {formatPHP(thanActual)} accrued
+      <Link
+        href={`/borrowers/${b.id}`}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flex: 1,
+          minWidth: 0,
+          textDecoration: "none",
+          color: "var(--text)",
+        }}
+      >
+        <Avatar b={b} size={40} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+            <span
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {b.name}
             </span>
-          )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span className={`pill pill-${isOverdue ? "danger" : "warning"}`}>
+              {isOverdue ? "overdue" : "active"}
+            </span>
+            {thanActual > 0 && (
+              <span className="money-sm" style={{ color: "var(--text-3)" }}>
+                {formatPHP(thanActual)} accrued
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      </Link>
       <div
         style={{
           display: "flex",
@@ -168,14 +194,16 @@ function CollectRow({ b, last }: { b: Borrower; last: boolean }) {
         <span className="money" style={{ fontSize: 13, fontWeight: 600 }}>
           {formatPHP(balance)}
         </span>
-        <span
-          className="btn btn-primary btn-xs"
-          style={{ padding: "0 12px", height: 26, pointerEvents: "none" }}
+        <button
+          type="button"
+          className="btn btn-success-soft btn-xs"
+          style={{ padding: "0 12px", height: 26 }}
+          onClick={() => onBayad(b)}
         >
           + Bayad
-        </span>
+        </button>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -184,6 +212,7 @@ export default function TodayPage() {
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bayadFor, setBayadFor] = useState<Borrower | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -238,7 +267,7 @@ export default function TodayPage() {
     return (
       sum +
       b.activity
-        .filter((a) => a.activity_type === "bayad" && a.created_at.startsWith(iso))
+        .filter((a) => BAYAD_ACTIVITY_TYPES.has(a.activity_type) && a.created_at.startsWith(iso))
         .reduce((s, a) => s + Number(a.amount || 0), 0)
     );
   }, 0);
@@ -339,7 +368,12 @@ export default function TodayPage() {
               </div>
             ) : (
               collectionList.map((b, i) => (
-                <CollectRow key={b.id} b={b} last={i === collectionList.length - 1} />
+                <CollectRow
+                  key={b.id}
+                  b={b}
+                  last={i === collectionList.length - 1}
+                  onBayad={setBayadFor}
+                />
               ))
             )}
           </div>
@@ -376,6 +410,16 @@ export default function TodayPage() {
           />
         </div>
       </div>
+
+      {bayadFor && (
+        <BayadSheet
+          borrower={bayadFor}
+          onClose={() => setBayadFor(null)}
+          onAdded={() => {
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

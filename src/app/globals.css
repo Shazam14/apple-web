@@ -301,3 +301,67 @@ input[type="number"] {
   border: 0;
   cursor: pointer;
 }
+
+.kfx .sheet-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(20, 25, 40, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.kfx .sheet {
+  position: relative;
+  background: var(--surface);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  padding: 12px 0 32px;
+  box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.15);
+  max-height: 92dvh;
+  overflow-y: auto;
+  animation: kfx-sheet-up .18s ease-out;
+}
+.kfx .sheet-handle {
+  width: 36px; height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  margin: 0 auto 16px;
+}
+@keyframes kfx-sheet-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (min-width: 1080px) {
+  .kfx .sheet-backdrop { align-items: center; padding: 24px; }
+  .kfx .sheet {
+    border-radius: 24px;
+    padding: 20px 0 28px;
+    animation: kfx-sheet-fade .15s ease-out;
+  }
+  @keyframes kfx-sheet-fade {
+    from { transform: scale(.98); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+}
+
+.kfx .chip {
+  height: 32px; padding: 0 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  display: inline-flex; align-items: center;
+  font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kfx .chip:hover { background: var(--surface-2); color: var(--text); }
+.kfx .chip-accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+.kfx .chip-accent:hover { background: var(--accent-soft); color: var(--accent); }
