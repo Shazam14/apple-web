@@ -87,14 +87,20 @@ export default function DashboardPage() {
   const router = useRouter();
   const [summary, setSummary] = useState<SettingsSummary | null>(null);
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
+  const [archived, setArchived] = useState<Borrower[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [s, bs] = await Promise.all([api.summary(), api.listBorrowers()]);
+      const [s, bs, ars] = await Promise.all([
+        api.summary(),
+        api.listBorrowers(),
+        api.listArchivedBorrowers(),
+      ]);
       setSummary(s);
       setBorrowers(bs);
+      setArchived(ars);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
@@ -166,7 +172,7 @@ export default function DashboardPage() {
       <EarningsOverview s={summary} borrowers={borrowers} />
       <RateSettings s={summary} onSaved={() => load()} />
       <BorrowersTable borrowers={borrowers} onChange={load} />
-      <ArchivedBorrowers onChange={load} />
+      <ArchivedBorrowers items={archived} onChange={load} />
     </main>
   );
 }

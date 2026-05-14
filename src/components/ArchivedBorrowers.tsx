@@ -1,28 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { api, Borrower, formatPHP } from "@/lib/api";
 import { Panel } from "./Card";
 
-export function ArchivedBorrowers({ onChange }: { onChange?: () => void }) {
-  const [items, setItems] = useState<Borrower[]>([]);
+export function ArchivedBorrowers({
+  items,
+  onChange,
+}: {
+  items: Borrower[];
+  onChange: () => void;
+}) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const list = await api.listArchivedBorrowers();
-      setItems(list);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
   const count = items.length;
 
   return (
@@ -43,14 +32,12 @@ export function ArchivedBorrowers({ onChange }: { onChange?: () => void }) {
             ? "Wala pay archive."
             : `${count} archived borrower${count === 1 ? "" : "s"} — click ▼ ipakita para makita.`}
         </div>
-      ) : loading ? (
-        <div className="text-xs text-muted">Loading…</div>
       ) : count === 0 ? (
         <div className="text-xs text-muted">Wala pay archive.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {items.map((b) => (
-            <ArchivedCard key={b.id} b={b} onRestored={() => { load(); onChange?.(); }} />
+            <ArchivedCard key={b.id} b={b} onRestored={onChange} />
           ))}
         </div>
       )}

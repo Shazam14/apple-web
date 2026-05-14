@@ -98,7 +98,7 @@ export function AddBorrowerModal({
         ...(baseThan ? { than: baseThan } : {}),
         ...(trimmed ? { label: trimmed } : {}),
         ...(tenorDays ? { tenor_days: tenorDays } : {}),
-        ...(ratePct && Number(ratePct) > 0 ? { rate_pct: ratePct } : {}),
+        ...(ratePct.trim() !== "" ? { rate_pct: ratePct } : {}),
         late_fee_period_days: periodDays,
       });
       onCreated();

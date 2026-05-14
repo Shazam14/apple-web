@@ -42,7 +42,7 @@ function diffDaysISO(fromISO: string, toISO: string): number {
 }
 
 function inferInitialRate(t: Tranche, b: Borrower): string {
-  if (t.rate_pct && Number(t.rate_pct) > 0) return t.rate_pct;
+  if (t.rate_pct !== null) return t.rate_pct;
   const p = Number(t.principal);
   const th = Number(t.than);
   if (p > 0 && th > 0) return ((th / p) * 100).toFixed(2);
@@ -126,7 +126,7 @@ export function EditTrancheModal({
         ...(thanChanged ? { than: thanValue.toFixed(2) } : {}),
         label: label.trim(),
         tenor_days: tenorDays,
-        rate_pct: ratePct && Number(ratePct) > 0 ? ratePct : null,
+        rate_pct: ratePct.trim() === "" ? null : ratePct,
         late_fee_period_days: periodDays,
         ...(releasedISO !== originalReleasedISO
           ? { released_at: `${releasedISO}T00:00:00` }
