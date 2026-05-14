@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KFX · Redesign exploration</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: 'Manrope', -apple-system, system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="kit.jsx"></script>
+<script type="text/babel" src="screens-mobile.jsx"></script>
+<script type="text/babel" src="screens-extra.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+// Translation dictionaries — 3 language modes
+const I18N = {
+  mix: {
+    today: 'Today', borrowers: 'Borrowers', money: 'Money', settings: 'Settings',
+    todayHello: 'Daghang trabaho karon',
+    toCollectToday: 'To collect today',
+    dueToday: 'due', overdue: 'overdue', multa: 'multa',
+    collectedSoFar: 'Collected so far',
+    collectionRound: 'Collection round', toVisit: 'to visit',
+    snapshot: 'Snapshot',
+    cashOnHand: 'Cash on hand', thanToday: 'Than today', collected: 'Collected', deployed: 'Deployed',
+    idle: 'Idle', thisCycle: 'this cycle', borrowersLower: 'borrowers',
+    bayad: 'Bayad', palod: 'Palod', latepay: 'Latepay',
+    searchBorrowers: 'Search borrowers…',
+    all: 'All', paid: 'Paid', active: 'Active',
+    day: 'day',
+    balance: 'Balance', released: 'Released', thanPerDay: 'Than / day',
+    ledger: 'Ledger', entries: 'entries', viewAll: 'View all',
+    close: 'Close', archive: 'Archive',
+    asOf: 'As of', asOfTime: '5:24 PM',
+    capitalAtWork: 'Capital at work',
+    lent: 'Lent', cash: 'Cash',
+    breakdown: 'Breakdown',
+    totalPuhunan: 'Total puhunan', lentOut: 'Lent out',
+    startingCapital: 'Starting capital',
+    thanCollected: 'Than collected', nakulha: 'nakulha',
+    unrealized: 'Unrealized', uncollected: 'accrued, uncollected',
+    reconcile: 'Reconcile',
+    puhunan: 'Puhunan',
+    cashAvailable: 'Cash available',
+    multaPending: 'Multa pending', notYetPosted: 'late fees not yet posted',
+    thanRate: 'Than rate & capital',
+    dailyRate: 'Daily rate', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
+    preferences: 'Preferences',
+    language: 'Language', theme: 'Theme', currency: 'Currency', help: 'Help',
+    gettingStarted: 'Getting started', light: 'Light', dark: 'Dark',
+    signOut: 'Sign out',
+    quickActions: 'Quick actions', filter: 'Filter', addBorrower: 'Add borrower',
+    todaysList: "Today's collection list", afterDeploy: 'After deploy & collect',
+    thanPerBorrower: 'Than / day per borrower', dueNow: 'Due now',
+    suggested: 'Suggested · 1× than',
+    thanCharged: 'Than charged', newBalance: 'New balance',
+    cancel: 'Cancel', recordBayad: 'Record bayad',
+    full: 'Full balance',
+  },
+  en: {
+    today: 'Today', borrowers: 'Borrowers', money: 'Money', settings: 'Settings',
+    todayHello: 'A lot to do today',
+    toCollectToday: 'To collect today',
+    dueToday: 'due', overdue: 'overdue', multa: 'late fee',
+    collectedSoFar: 'Collected so far',
+    collectionRound: 'Collection round', toVisit: 'to visit',
+    snapshot: 'Snapshot',
+    cashOnHand: 'Cash on hand', thanToday: 'Interest today', collected: 'Collected', deployed: 'Deployed',
+    idle: 'Idle', thisCycle: 'this cycle', borrowersLower: 'borrowers',
+    bayad: 'Payment', palod: 'Release', latepay: 'Late pay',
+    searchBorrowers: 'Search borrowers…',
+    all: 'All', paid: 'Paid', active: 'Active',
+    day: 'day',
+    balance: 'Balance', released: 'Released', thanPerDay: 'Interest / day',
+    ledger: 'Ledger', entries: 'entries', viewAll: 'View all',
+    close: 'Close', archive: 'Archive',
+    asOf: 'As of', asOfTime: '5:24 PM',
+    capitalAtWork: 'Capital at work',
+    lent: 'Lent', cash: 'Cash',
+    breakdown: 'Breakdown',
+    totalPuhunan: 'Total capital', lentOut: 'Lent out',
+    startingCapital: 'Starting capital',
+    thanCollected: 'Interest collected', nakulha: 'collected',
+    unrealized: 'Unrealized', uncollected: 'accrued, uncollected',
+    reconcile: 'Reconcile',
+    puhunan: 'Capital',
+    cashAvailable: 'Cash available',
+    multaPending: 'Late fees pending', notYetPosted: 'late fees not yet posted',
+    thanRate: 'Interest rate & capital',
+    dailyRate: 'Daily rate', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly',
+    preferences: 'Preferences',
+    language: 'Language', theme: 'Theme', currency: 'Currency', help: 'Help',
+    gettingStarted: 'Getting started', light: 'Light', dark: 'Dark',
+    signOut: 'Sign out',
+    quickActions: 'Quick actions', filter: 'Filter', addBorrower: 'Add borrower',
+    todaysList: "Today's list", afterDeploy: 'After deploy & collect',
+    thanPerBorrower: 'Interest / day per borrower', dueNow: 'Due now',
+    suggested: 'Suggested · 1× interest',
+    thanCharged: 'Interest charged', newBalance: 'New balance',
+    cancel: 'Cancel', recordBayad: 'Record payment',
+    full: 'Full balance',
+  },
+  bs: {
+    today: 'Karon', borrowers: 'Mga utangan', money: 'Kuwarta', settings: 'Setting',
+    todayHello: 'Daghang trabaho karon',
+    toCollectToday: 'Kuhaon karon',
+    dueToday: 'naa karon', overdue: 'na-overdue', multa: 'multa',
+    collectedSoFar: 'Nakuha na',
+    collectionRound: 'Pag-bisita', toVisit: 'bisitahon',
+    snapshot: 'Tan-aw',
+    cashOnHand: 'Hawan', thanToday: 'Than karon', collected: 'Nakulha', deployed: 'Gipa-utang',
+    idle: 'Walay buhat', thisCycle: 'karong syklo', borrowersLower: 'utangan',
+    bayad: 'Bayad', palod: 'Palod', latepay: 'Latepay',
+    searchBorrowers: 'Pangitaa…',
+    all: 'Tanan', paid: 'Bayad na', active: 'Buhi',
+    day: 'adlaw',
+    balance: 'Balanse', released: 'Gipalod', thanPerDay: 'Than / adlaw',
+    ledger: 'Talaan', entries: 'lista', viewAll: 'Tan-awa tanan',
+    close: 'Sirado', archive: 'Tagoa',
+    asOf: 'Hangtod', asOfTime: '5:24 PM',
+    capitalAtWork: 'Kuwarta nga gipa-utang',
+    lent: 'Gipalod', cash: 'Hawan',
+    breakdown: 'Pagbahin-bahin',
+    totalPuhunan: 'Total puhunan', lentOut: 'Gipa-utang',
+    startingCapital: 'Sinugdanan',
+    thanCollected: 'Nakulhang than', nakulha: 'nakulha',
+    unrealized: 'Wala pa makulha', uncollected: 'wala pa nakuha',
+    reconcile: 'Tukma',
+    puhunan: 'Puhunan',
+    cashAvailable: 'Hawan',
+    multaPending: 'Multa pa', notYetPosted: 'wa pa naka-post',
+    thanRate: 'Than rate ug puhunan',
+    dailyRate: 'Rate kada adlaw', daily: 'Adlaw', weekly: 'Semana', monthly: 'Bulan',
+    preferences: 'Pagpili',
+    language: 'Pinulungan', theme: 'Tema', currency: 'Salapi', help: 'Tabang',
+    gettingStarted: 'Sugdi diri', light: 'Hayag', dark: 'Itom',
+    signOut: 'Pahawa',
+    quickActions: 'Paspas', filter: 'Sala', addBorrower: 'Dugang utangan',
+    todaysList: 'Lista karon', afterDeploy: 'Human deploy ug kulha',
+    thanPerBorrower: 'Than / adlaw kada usa', dueNow: 'Bayronon karon',
+    suggested: 'Tan-awa · 1× than',
+    thanCharged: 'Gi-charge nga than', newBalance: 'Bag-ong balanse',
+    cancel: 'Tiwas', recordBayad: 'I-record bayad',
+    full: 'Tibuok',
+  },
+};
+
+const DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "lang": "mix",
+  "accent": "#2a6fdb",
+  "density": "cozy"
+}/*EDITMODE-END*/;
+
+const ACCENTS = {
+  '#2a6fdb': { a: 'oklch(48% 0.15 245)', a2: 'oklch(54% 0.15 245)', soft: 'oklch(95% 0.03 245)' },
+  '#1f3a5c': { a: 'oklch(34% 0.10 250)', a2: 'oklch(40% 0.12 250)', soft: 'oklch(94% 0.025 250)' },
+  '#1f8a5b': { a: 'oklch(46% 0.13 160)', a2: 'oklch(52% 0.13 160)', soft: 'oklch(95% 0.03 160)' },
+  '#c47a1a': { a: 'oklch(58% 0.16 75)',  a2: 'oklch(64% 0.16 75)',  soft: 'oklch(95% 0.04 75)' },
+};
+
+function App() {
+  const [t, setTweak] = useTweaks(DEFAULTS);
+  const settings = { lang: t.lang, theme: t.theme };
+  const tr = I18N[t.lang] || I18N.mix;
+
+  // Apply theme + accent globally
+  useEffect(() => {
+    document.documentElement.dataset.theme = t.theme;
+    const a = ACCENTS[t.accent] || ACCENTS.blue;
+    document.documentElement.style.setProperty('--accent', a.a);
+    document.documentElement.style.setProperty('--accent-2', a.a2);
+    document.documentElement.style.setProperty('--accent-soft', a.soft);
+  }, [t.theme, t.accent]);
+
+  return (
+    <>
+      <DesignCanvas>
+        <DCSection id="overview" title="KFX · Mobile-first redesign" subtitle="Tap any artboard to focus · drag to reorder">
+          <DCArtboard id="rationale" label="Approach" width={420} height={844}>
+            <ApproachCard />
+          </DCArtboard>
+          <DCArtboard id="today-m" label="01 · Today" width={390} height={844}>
+            <TodayScreen t={tr} />
+          </DCArtboard>
+          <DCArtboard id="borrowers-m" label="02 · Borrowers" width={390} height={844}>
+            <BorrowersScreen t={tr} />
+          </DCArtboard>
+          <DCArtboard id="detail-m" label="03 · Borrower detail" width={390} height={844}>
+            <BorrowerDetail t={tr} />
+          </DCArtboard>
+          <DCArtboard id="money-m" label="04 · Money" width={390} height={844}>
+            <MoneyScreen t={tr} />
+          </DCArtboard>
+          <DCArtboard id="settings-m" label="05 · Settings" width={390} height={844}>
+            <SettingsScreen t={tr} settings={settings} setS={setTweak} />
+          </DCArtboard>
+          <DCArtboard id="bayad-sheet" label="06 · Record bayad" width={390} height={844}>
+            <AddBayadSheet t={tr} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="desktop" title="Desktop · same data model, sidebar layout" subtitle="One codebase responds to viewport size">
+          <DCArtboard id="desktop-today" label="Desktop · Today" width={1280} height={800}>
+            <DesktopApp t={tr} activeTab="today" />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Visual">
+          <TweakRadio label="Theme" value={t.theme} options={[{value:'light',label:'Light'},{value:'dark',label:'Dark'}]} onChange={v => setTweak('theme', v)} />
+          <TweakColor label="Accent" value={t.accent}
+            options={['#2a6fdb', '#1f3a5c', '#1f8a5b', '#c47a1a']}
+            onChange={v => setTweak('accent', v)} />
+        </TweakSection>
+        <TweakSection label="Language">
+          <TweakRadio label="Mode" value={t.lang} options={[
+            {value:'mix', label:'Mix'},
+            {value:'en',  label:'EN'},
+            {value:'bs',  label:'Bisaya'},
+          ]} onChange={v => setTweak('lang', v)} />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+function ApproachCard() {
+  return (
+    <div className="kfx" style={{
+      width: '100%', height: '100%',
+      padding: 32, overflow: 'auto',
+      background: 'var(--surface)',
+    }}>
+      <div className="eyebrow" style={{ marginBottom: 12 }}>Redesign approach</div>
+      <div className="h1" style={{ marginBottom: 14, fontSize: 26 }}>From one long page → 4 focused screens</div>
+      <p className="body" style={{ color: 'var(--text-2)', marginBottom: 22 }}>
+        The current dashboard is a status report, a settings panel, and an action surface stacked on top of each other.
+        It works at a desk but won't survive a phone. This redesign splits it by <em>job</em>, not by section.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Princ n="01" title="Today is the home screen" body="Open the app → see exactly what needs action today. Borrowers due, overdue, multa pending. One tap to record a bayad." />
+        <Princ n="02" title="Borrowers drill in, not out" body="List rows stay narrow. All actions (palod, bayad, latepay, multa, close, archive) live inside the borrower's own page where there's room." />
+        <Princ n="03" title="One source of truth per number" body="Total puhunan was shown 3 times. Now: hero on Money, recap on Settings. Each number lives in one place." />
+        <Princ n="04" title="Bisaya stays for the verbs that matter" body="Palod, bayad, multa, than, puhunan, nakulha — these are how you already think about the business. UI chrome in English; toggle to fuller Bisaya if you prefer." />
+        <Princ n="05" title="Same app on phone and laptop" body="Bottom-tab nav on mobile becomes a sidebar on desktop. Same screens, same data — just more room to breathe." />
+      </div>
+
+      <div style={{
+        marginTop: 24, padding: 14,
+        background: 'var(--accent-soft)', borderRadius: 12,
+        color: 'var(--accent)', fontSize: 13, fontWeight: 500,
+      }}>
+        → Swipe through artboards on the right. Use the <strong>Tweaks</strong> toggle (top-right of toolbar) to switch theme, accent, and language.
+      </div>
+    </div>
+  );
+}
+
+function Princ({ n, title, body }) {
+  return (
+    <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+        background: 'var(--text)', color: 'var(--surface)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: 700,
+      }}>{n}</div>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{title}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{body}</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

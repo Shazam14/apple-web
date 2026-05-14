@@ -1,10 +1,5 @@
-@import "tailwindcss";
+/* KFX — design tokens */
 
-/* ============================================================
-   New design tokens (KFX / CoolEd redesign)
-   Used by /today /borrowers /money /settings shell.
-   Apply by wrapping content in `.kfx` (light by default).
-   ============================================================ */
 :root {
   --bg: oklch(98.5% 0.005 85);
   --surface: #ffffff;
@@ -17,11 +12,13 @@
   --text-3: oklch(62% 0.012 250);
   --text-4: oklch(75% 0.01 250);
 
+  /* Accent (banking blue) */
   --accent: oklch(48% 0.15 245);
   --accent-2: oklch(54% 0.15 245);
   --accent-soft: oklch(95% 0.03 245);
   --on-accent: #ffffff;
 
+  /* States */
   --success: oklch(52% 0.13 155);
   --success-soft: oklch(95% 0.04 155);
   --warning: oklch(62% 0.16 65);
@@ -38,8 +35,12 @@
   --sh-1: 0 1px 2px rgba(20, 25, 40, 0.04), 0 1px 1px rgba(20, 25, 40, 0.03);
   --sh-2: 0 4px 16px rgba(20, 25, 40, 0.05), 0 1px 2px rgba(20, 25, 40, 0.04);
   --sh-3: 0 12px 32px rgba(20, 25, 40, 0.08), 0 4px 12px rgba(20, 25, 40, 0.05);
+
+  --font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 }
 
+/* Dark theme variables — applied when [data-theme="dark"] */
 [data-theme="dark"] {
   --bg: oklch(16% 0.015 250);
   --surface: oklch(20% 0.015 250);
@@ -66,56 +67,10 @@
   --sh-3: 0 12px 32px rgba(0,0,0,.4);
 }
 
-/* ============================================================
-   Legacy Tailwind theme (existing dashboard components).
-   Kept so the current /today single-page dashboard renders
-   unchanged while the new screens build out alongside.
-   ============================================================ */
-@theme {
-  --color-bg: #0d1117;
-  --color-panel: #131a22;
-  --color-panel-border: #1f2a36;
-  --color-card: #182231;
-  --color-card-border: #243245;
-  --color-muted: #8a96a8;
-  --color-muted-soft: #c4cdd9;
-  --color-amber: #ba7517;
-  --color-amber-soft: #d49241;
-  --color-green: #1d9e75;
-  --color-green-soft: #34c794;
-  --color-blue: #185fa5;
-  --color-blue-soft: #4d8ed1;
-  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
-}
-
-html, body {
-  background-color: var(--color-bg);
-  color: #e6ebf2;
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
-
-input, select {
-  font-family: inherit;
-}
-
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-
-/* ============================================================
-   .kfx — new design system component helpers.
-   Wrap any redesigned screen in `<div className="kfx">` to opt
-   into the new tokens + Manrope + JetBrains Mono.
-   ============================================================ */
+/* Base */
 .kfx, .kfx * { box-sizing: border-box; }
 .kfx {
-  font-family: var(--font-manrope), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: var(--font-ui);
   font-feature-settings: 'cv11', 'ss03';
   color: var(--text);
   background: var(--bg);
@@ -124,8 +79,9 @@ input[type="number"] {
   letter-spacing: -0.005em;
 }
 
+/* Typography */
 .kfx .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
-.kfx .mono { font-family: var(--font-jetbrains), 'SF Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.kfx .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 .kfx .eyebrow {
   text-transform: uppercase;
@@ -147,14 +103,15 @@ input[type="number"] {
 .kfx .body { font-size: 14px; line-height: 1.45; }
 .kfx .small { font-size: 12px; line-height: 1.4; color: var(--text-3); }
 
+/* Money */
 .kfx .money {
-  font-family: var(--font-jetbrains), 'SF Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 .kfx .money-hero {
-  font-family: var(--font-jetbrains), 'SF Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   font-size: 40px;
@@ -162,14 +119,14 @@ input[type="number"] {
   line-height: 1;
 }
 .kfx .money-lg {
-  font-family: var(--font-jetbrains), 'SF Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   font-size: 22px;
   letter-spacing: -0.02em;
 }
 .kfx .money-sm {
-  font-family: var(--font-jetbrains), 'SF Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
   font-size: 13px;
@@ -180,12 +137,18 @@ input[type="number"] {
 .kfx .warn { color: var(--warning); }
 .kfx .accent { color: var(--accent); }
 
+/* Card */
 .kfx .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
 }
+.kfx .card-flat {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+}
 
+/* Pill */
 .kfx .pill {
   display: inline-flex; align-items: center; gap: 4px;
   height: 22px; padding: 0 8px;
@@ -195,12 +158,17 @@ input[type="number"] {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.kfx .pill-dot {
+  width: 6px; height: 6px; border-radius: 999px;
+  display: inline-block;
+}
 .kfx .pill-success { background: var(--success-soft); color: var(--success); }
 .kfx .pill-warning { background: var(--warning-soft); color: var(--warning); }
 .kfx .pill-danger { background: var(--danger-soft); color: var(--danger); }
 .kfx .pill-accent { background: var(--accent-soft); color: var(--accent); }
 .kfx .pill-muted { background: var(--surface-sunk); color: var(--text-3); }
 
+/* Buttons */
 .kfx .btn {
   height: 44px; padding: 0 16px;
   border-radius: var(--r-md);
@@ -220,8 +188,10 @@ input[type="number"] {
 .kfx .btn-sm { height: 32px; padding: 0 10px; font-size: 13px; }
 .kfx .btn-xs { height: 26px; padding: 0 8px; font-size: 12px; border-radius: 8px; }
 
+/* Divider */
 .kfx .divider { height: 1px; background: var(--border); border: 0; margin: 0; }
 
+/* Hairline list */
 .kfx .row {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
@@ -229,29 +199,22 @@ input[type="number"] {
 }
 .kfx .row:last-child { border-bottom: 0; }
 
+/* Bottom nav */
 .kfx .botnav {
   display: grid; grid-template-columns: repeat(4, 1fr);
   padding: 6px 6px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
-@media (min-width: 1080px) {
-  .kfx .botnav { display: none; }
-}
-
-.kfx-sidebar { display: none; }
-@media (min-width: 1080px) {
-  .kfx-sidebar { display: flex; }
-}
 .kfx .botnav-item {
   display: flex; flex-direction: column; align-items: center;
   gap: 2px; padding: 8px 0; border-radius: 12px;
   color: var(--text-3); font-size: 10px; font-weight: 600;
   letter-spacing: 0.02em;
-  text-decoration: none;
 }
 .kfx .botnav-item.active { color: var(--accent); }
 
+/* Capital deployment bar */
 .kfx .bar {
   height: 8px; border-radius: 999px; overflow: hidden;
   background: var(--surface-sunk);
@@ -259,6 +222,7 @@ input[type="number"] {
 }
 .kfx .bar > span { display: block; height: 100%; }
 
+/* Sidebar (desktop) */
 .kfx .sidebar-item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
@@ -266,11 +230,11 @@ input[type="number"] {
   font-size: 14px; font-weight: 500;
   color: var(--text-2);
   cursor: pointer;
-  text-decoration: none;
 }
 .kfx .sidebar-item:hover { background: var(--surface-2); color: var(--text); }
 .kfx .sidebar-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
+/* Subtle focus rings & inputs */
 .kfx .input {
   height: 40px; padding: 0 12px;
   border: 1px solid var(--border-strong);
@@ -283,6 +247,7 @@ input[type="number"] {
 }
 .kfx .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
+/* Avatar */
 .kfx .avatar {
   width: 36px; height: 36px; border-radius: 999px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -290,14 +255,30 @@ input[type="number"] {
   color: white; flex-shrink: 0;
 }
 
+/* Sparkbars (mini bar chart) */
+.kfx .sparkbars { display: flex; align-items: flex-end; gap: 2px; height: 28px; }
+.kfx .sparkbars > span { width: 4px; background: currentColor; border-radius: 1px; opacity: .55; }
+
+/* FAB */
 .kfx .fab {
-  position: fixed; right: 16px; bottom: 88px;
+  position: absolute; right: 16px; bottom: 88px;
   width: 56px; height: 56px; border-radius: 999px;
   background: var(--accent); color: var(--on-accent);
   display: flex; align-items: center; justify-content: center;
   box-shadow: var(--sh-3);
   font-size: 28px; font-weight: 300;
   z-index: 5;
-  border: 0;
-  cursor: pointer;
+}
+
+/* Notes / annotations on canvas */
+.kfx-note {
+  font-family: var(--font-ui, 'Manrope');
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5a4a2a;
+  background: #fef4a8;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  max-width: 280px;
 }
